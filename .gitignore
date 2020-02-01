@@ -3,3 +3,4 @@ packages/*
 *.sln
 *.vcxproj*
 packages.config
+Debug/*
