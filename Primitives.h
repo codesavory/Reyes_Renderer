@@ -18,12 +18,29 @@ public:
         this->b = b;
         this->a = a;
     }
+
+    Color(float r, float g, float b, float a) {
+        int ir = (int)std::floorf(r);
+        int ig = (int)std::floorf(g);
+        int ib = (int)std::floorf(b);
+        int ia = (int)std::floorf(a);
+
+        ir = std::max(0, std::min(ir, 255));
+        ig = std::max(0, std::min(ig, 255));
+        ib = std::max(0, std::min(ib, 255));
+
+        this->r = ir;
+        this->g = ig;
+        this->b = ib;
+        this->a = ia;
+    }
 };
 
 class Triangle {
 public:
     std::vector<int> vert_ids;
     Color color;
+    std::vector<Eigen::Vector4f> screen_coordinates;
 };
 
 class Primitive {
