@@ -1,6 +1,7 @@
 #include "Ri.h"
 #include "States.h"
 
+
 ImageState::ImageState() {
 	filename = nullptr;
 }
