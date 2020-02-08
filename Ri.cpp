@@ -92,13 +92,14 @@ void RiFrameBegin(int i) {
 
 void RiColor(RtColor color) {
 	float r = color[0];
-	float b = color[1];
-	float g = color[2];
+	float g = color[1];
+	float b = color[2];
 
 	r *= 255.0f;
 	g *= 255.0f;
 	b *= 255.0f;
-	render_state.current_color = Color(r,g,b,1);
+	Color c = Color(r, g, b, 1.0f);
+	render_state.current_color = c;
 }
 
 void RiFrameAspectRatio(float aspect_ratio) {
@@ -129,7 +130,7 @@ void RiFrameEnd() {
 	//auto world_mesh = world_state.world_mesh;
 	auto world_to_view_transformation = render_state.transformation;
 	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 0, 50);
-	auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 0.0, 50.0);
+	auto view_to_frame_transformation = get_perspective_projection_matrix(90.0, 1.0, 0.0, 100);
 
 	for (int i = 0; i < world_objects.size(); ++i) {
 		auto& object = world_objects[i];

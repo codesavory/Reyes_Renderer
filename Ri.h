@@ -216,7 +216,7 @@ RiGeneralPolygonV(RtInt nloops, RtInt nverts[],
 		RtFloat knot[], RtFloat min[], RtFloat max[], RtInt n[],
 		RtFloat u[], RtFloat v[], RtFloat w[]);
 extern RtVoid
-RiSphere(RtFloat radius, RtFloat zmin, RtFloat zmax, RtFloat tmax, ...),
+RiSphere(RtFloat radius, RtFloat zmin, RtFloat zmax, RtFloat tmax),
 RiSphereV(RtFloat radius, RtFloat zmin, RtFloat zmax, RtFloat tmax,
 	RtInt n, RtToken tokens[], RtPointer parms[]),
 	RiCone(RtFloat height, RtFloat radius, RtFloat tmax, ...),
@@ -235,7 +235,7 @@ RiSphereV(RtFloat radius, RtFloat zmin, RtFloat zmax, RtFloat tmax,
 	RiDiskV(RtFloat height, RtFloat radius, RtFloat tmax,
 		RtInt n, RtToken tokens[], RtPointer parms[]),
 	RiTorus(RtFloat majrad, RtFloat minrad, RtFloat phimin,
-		RtFloat phimax, RtFloat tmax, ...),
+		RtFloat phimax, RtFloat tmax),
 	RiTorusV(RtFloat majrad, RtFloat minrad,
 		RtFloat phimin, RtFloat phimax, RtFloat tmax,
 		RtInt n, RtToken tokens[], RtPointer parms[]);
