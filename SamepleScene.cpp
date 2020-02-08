@@ -1,6 +1,68 @@
 #include <stdio.h>
 #include "Ri.h"
-#include "Reyes_Impl.h"
+//#include "Renderer.h"
+#include <Eigen/Eigen>
+#include <iostream>
+//#include "Reyes_Impl.h"
+
+
+void SampleScene1(void) {
+	int i;
+	int nf;
+	float slopex, slopey, slopez;
+	char name[50];
+
+	RtColor red = { 0.5,0,0 };
+	RtColor green = { 0,1,0 };
+	RtColor blue = { 0,0,1 };
+	RtColor white = { 1,1,1 };
+
+
+	RtPoint p1 = { 30,0,10 }; /* ball's initial position */
+	RtPoint p2 = { 0,20,10 }; /* ball's final position  */
+
+
+	RtFloat fov = 45;
+	RtFloat intensity1 = 0.1;
+	RtFloat intensity2 = 1.5;
+	RtInt init = 0, end = 1;
+
+
+	nf = 100; /* number of frames to output */
+	slopex = (p2[0] - p1[0]) / nf;
+	slopey = (p2[1] - p1[1]) / nf;
+	slopez = (p2[2] - p1[2]) / nf;
+
+	RiBegin(RI_NULL);
+
+	RiFormat(50, 50, 1);
+	RiPixelSamples(2, 2);
+	RiShutter(0, 1);
+
+	/* new code*/
+	RiFrameBegin(1);
+	RiTranslate(0, 0, -50);
+
+	RiWorldBegin();
+	RiTransformBegin();
+
+	RiTranslate(0, 0, 0);
+	RiColor(red);
+	RiSphere(20, 0, 0, 0);
+
+	//RiTranslate(0, 0, -30);
+	//RiColor(blue);
+	//RiSphere(10, 0, 0, 0);
+	
+	
+	//RiTorus(40, 20, 0, 0, 0);
+	RiTransformEnd();
+	RiWorldEnd();
+	RiFrameEnd();
+	RiEnd();
+
+
+}
 
 //void SampleScene1(void) {
 //	int i;
