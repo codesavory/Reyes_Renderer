@@ -11,11 +11,12 @@
 #include <numeric>
 
 
-float area(int x1, int y1, int x2, int y2, int x3, int y3)
+float area(float x1, float y1, float x2, float y2, float x3, float y3)
 {
     return abs((x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)) / 2.0);
 }
 
+/*
 bool isInside(float x, float y, const Eigen::Vector4f* _v)
 {
     float ar = area(_v[0].x(), _v[0].y(), _v[1].x(), _v[1].y(), _v[2].x(), _v[2].y());
@@ -24,10 +25,35 @@ bool isInside(float x, float y, const Eigen::Vector4f* _v)
     float ar2 = area(_v[0].x(), _v[0].y(), x, y, _v[2].x(), _v[2].y());
     float ar3 = area(_v[0].x(), _v[0].y(), _v[1].x(), _v[1].y(), x, y);
     bool res = (ar == ar1 + ar2 + ar3);
-    return ar;
+    return res;
 
 }
+*/
 
+static std::tuple<float, float, float> computeBarycentric2D(float x, float y, Eigen::Vector4f* v)
+{
+    float c1 = (x * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * y + v[1].x() * v[2].y() - v[2].x() * v[1].y()) / (v[0].x() * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * v[0].y() + v[1].x() * v[2].y() - v[2].x() * v[1].y());
+    float c2 = (x * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * y + v[2].x() * v[0].y() - v[0].x() * v[2].y()) / (v[1].x() * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * v[1].y() + v[2].x() * v[0].y() - v[0].x() * v[2].y());
+    float c3 = (x * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * y + v[0].x() * v[1].y() - v[1].x() * v[0].y()) / (v[2].x() * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * v[2].y() + v[0].x() * v[1].y() - v[1].x() * v[0].y());
+    return { c1,c2,c3 };
+}
+
+
+inline
+bool edgeFunction(const Eigen::Vector4f& a, const Eigen::Vector4f& b, const Eigen::Vector4f& c)
+{
+    return ((c.x() - a.x()) * (b.y() - a.y()) - (c.y() - a.y()) * (b.x() - a.x()) >= 0);
+}
+
+inline
+bool isInside(float x, float y, const Eigen::Vector4f* _v) {
+    Eigen::Vector4f p(x, y, 0.0, 0.0);
+    bool inside = true;
+    inside &= edgeFunction(_v[0], _v[1], p);
+    inside &= edgeFunction(_v[1], _v[2], p);
+    inside &= edgeFunction(_v[2], _v[0], p);
+    return inside;
+}
 
 
 
@@ -45,17 +71,20 @@ public:
         this->xsamples = xsamples;
         this->ysamples = ysamples;
         buff.resize(width * xsamples * heigth * ysamples);
+        //buff.resize(width * heigth);
     }
 
-    T operator() (int x, int y) const {
-        //int id = (y * xsamples * ysamples * w + x * xsamples * ysamples + n * xsamples + m);
-        int id = (y * xsamples * ysamples * w + x * xsamples * ysamples + 0);
+    T operator() (int x, int y, int m, int n) const {
+        int id = (y * xsamples * ysamples * w + x * xsamples * ysamples + n * xsamples + m);
+        //int id = (y * xsamples * ysamples * w + x * xsamples * ysamples + 0);
+        //int id = y * w + x;
         return buff[id];
     }
 
-    T& operator() (int x, int y) {
-        //int id = (y * xsamples * ysamples * w + x * xsamples * ysamples + n * xsamples + m);
-        int id = (y * xsamples * ysamples * w + x * xsamples * ysamples + 0);
+    T& operator() (int x, int y, int m, int n) {
+        int id = (y * xsamples * ysamples * w + x * xsamples * ysamples + n * xsamples + m);
+        //int id = (y * xsamples * ysamples * w + x * xsamples * ysamples + 0);
+        //int id = y * w + x;
         return buff[id];
     }
 };
@@ -66,85 +95,95 @@ public:
     FrameBuffer(int width, int heigth, int xsamples, int ysamples)
         : Buffer(width, heigth, xsamples, ysamples) {}
 
+    Color collapse(int x, int y) {
 
-    void sample(int x, int y, std::function< std::tuple<bool, Color>(float, float) > checker) {
+        Eigen::Vector4f pix_color = Eigen::Vector4f::Zero();
 
-        Eigen::Vector3f pixel_color(0, 0, 0);
-        for (float m = 0; m < xsamples; ++m) {
-            for (float n = 0; n < ysamples; ++n) {
-
-                float mMin = (float)m / xsamples;
-                float nMin = (float)n / ysamples;
-                float mMax = (float)(m + 1) / xsamples;
-                float nMax = (float)(n + 1) / ysamples;
-
-                float x_delta = ((float)rand() / RAND_MAX) * (mMax - mMin) + mMin;;
-                float y_delta = ((float)rand() / RAND_MAX) * (nMax - nMin) + nMin;
-
-                float sample_x = x + x_delta;
-                float sample_y = y + y_delta;
-
-                bool is_inside;
-                Color color;
-                std::tie(is_inside, color) = checker(sample_x, sample_y);
-                if (is_inside) {
-                    pixel_color += Eigen::Vector3f(color.r, color.g, color.b);
-                }
+        for (int m = 0; m < xsamples; ++m) {
+            for (int n = 0; n < ysamples; ++n) {
+                Color sc = this->operator()(x, y, m, n);
+                pix_color += Eigen::Vector4f(sc.r, sc.g, sc.b, sc.a);
             }
         }
 
-        pixel_color /= (xsamples * ysamples);
-        Color final(pixel_color[0], pixel_color[1], pixel_color[2], 1);
-        this -> operator()(x, y) = final;
-
-    }
-
-
-    void sample2(int x, int y, std::function< std::tuple<bool, Color>(float, float) > checker) {
-
-        // Sample corners first
-        float xdelta = (1 / xsamples) * 0.5f;
-        float ydelta = (1 / ysamples) * 0.5f;
-
-        float corner_points[4][2] = {
-            {x + xdelta, y + ydelta},               // bottom_left
-            {x + (1 - xdelta), y + ydelta},         // top left
-            {x + (1 - xdelta), y + (1 - ydelta)},   // top right
-            {x + xdelta, y + (1 - ydelta)}          // bottom rihjt
-        };
-
-        bool all_corners = true;
-        Color pix_color;
-        for (int i = 0; i < 4; ++i) {
-            
-            bool is_inside;
-            Color color;
-            std::tie(is_inside, color) = checker(corner_points[i][0], corner_points[i][1]);
-            all_corners = all_corners & is_inside;
-            pix_color = color;
-            
-        }
-
-        if (all_corners) {
-            this -> operator()(x, y) = pix_color;
-            return;
-        }
-
-
-
+        pix_color /= (xsamples * ysamples);
+        Color c(pix_color[0], pix_color[1], pix_color[2], pix_color[3]);
+        return c;
     }
 };
 
 
 
-class ZBuffer : public Buffer<std::vector<float>> {
+class ZBuffer : public Buffer<std::list<float>> {
 public:
     ZBuffer(int width, int heigth, int xsamples, int ysamples)
-        : Buffer(width, heigth, xsamples, ysamples) {}
+        : Buffer(width, heigth, xsamples, ysamples) 
+    {
+        //buff.resize(width * heigth * xsamples * ysamples);
+        //for (int i = 0; i < buff.size(); ++i) {
+        //    buff[i].push_front(std::numeric_limits<float>::infinity());
+        //}
+    }    
 };
 
 
-void pimage(Buffer<Color> frame_buffer) {
+void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& zb, 
+    Triangle t) {
+
+    Eigen::Vector3f pixel_color(0, 0, 0);
+    for (float m = 0; m < xsamples; ++m) {
+        for (float n = 0; n < ysamples; ++n) {
+
+            float mMin = (float)m / xsamples;
+            float nMin = (float)n / ysamples;
+            float mMax = (float)(m + 1) / xsamples;
+            float nMax = (float)(n + 1) / ysamples;
+
+            float x_delta = ((float)rand() / RAND_MAX) * (mMax - mMin) + mMin;;
+            float y_delta = ((float)rand() / RAND_MAX) * (nMax - nMin) + nMin;
+
+            float sample_x = x + x_delta;
+            float sample_y = y + y_delta;
+
+            //bool is_inside;
+            //Triangle t;
+            float alpha, beta, gamma = 0.0f;
+            //std::tie(is_inside, t) = checker(sample_x, sample_y);
+
+            bool is_inside = isInside(sample_x, sample_y, t.screen_coordinates.data());
+
+            if (is_inside) {
+                // z buff test
+                std::vector<Eigen::Vector4f> v = t.screen_coordinates;
+                std::tie(alpha, beta, gamma) = computeBarycentric2D(x, y, v.data());
+                float w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                z_interpolated *= w_reciprocal;
+
+                float curr_depth = 0.0f;
+                auto buff_at_pos = zb(x, y, m, n);
+                if (buff_at_pos.size() == 0)
+                    curr_depth = std::numeric_limits<float>::infinity();
+                else
+                    curr_depth = buff_at_pos.front();
+
+                if (z_interpolated <= curr_depth) {
+                    zb(x, y, m, n).push_front(z_interpolated);
+                    fb(x, y, m, n) = t.color;
+                }
+                else {
+                    /*pixel_color += Eigen::Vector3f(color.r, color.g, color.b);*/
+                }
+                
+            }
+            else {
+
+            }
+        }
+    }
+}
+
+void pimage(FrameBuffer frame_buffer) {
     const char* filename = "D:\\stbjpg3.jpg";
     const int CHANNEL_NUM = 3;
 
@@ -152,7 +191,7 @@ void pimage(Buffer<Color> frame_buffer) {
     int height = frame_buffer.h;
 
     //grey background
-    uint8_t* out_buffer = new uint8_t[width * height * CHANNEL_NUM]();
+    uint8_t* out_buffer = new uint8_t[width * height * CHANNEL_NUM * 4]();
 
     // Set background color
     // For the following framebuffer, (0,0) pixel is at the top left
@@ -161,10 +200,27 @@ void pimage(Buffer<Color> frame_buffer) {
     {
         for (int y = 0; y < height; ++y)
         {
+            
             index = (y * width * 3) + x * 3;
-            out_buffer[index++] = frame_buffer(x, y).r;
-            out_buffer[index++] = frame_buffer(x, y).g;
-            out_buffer[index++] = frame_buffer(x, y).b;
+            Color pix_color = frame_buffer.collapse(x, y);
+            out_buffer[index++] = pix_color.r;
+            out_buffer[index++] = pix_color.g;
+            out_buffer[index++] = pix_color.b;
+            
+
+            
+            /*for (int m = 0; m < 2; ++m) {
+                for (int n = 0; n < 2; ++n) {
+
+                    index = (y * width * 3) + x * 3;
+                    out_buffer[index++] = frame_buffer(x, y,m,n).r;
+                    out_buffer[index++] = frame_buffer(x, y, m, n).g;
+                    out_buffer[index++] = frame_buffer(x, y, m, n).b;
+
+                }
+            }*/
+            
+            
         }
     }
 
@@ -206,19 +262,19 @@ void render_frame(std::vector<Primitive> world_objects, RenderState render_state
             //if (screen_x < 0 || screen_x > width || screen_y< 0 || screen_y > height) continue;
             //frame_buffer(screen_x, screen_y) = Color(255, 255, 255, 1);
 		}
-
-
         
         // Sample triangles
         auto& triangles = obj.triangles;
         auto& pixel_points = obj.transformed_points;
         for (auto t = triangles.begin(); t != triangles.end(); ++t) {
 
-            Eigen::Vector4f v[3] = { 
+            std::vector<Eigen::Vector4f> v({ 
                 pixel_points[t->vert_ids[0]], 
                 pixel_points[t->vert_ids[1]], 
                 pixel_points[t->vert_ids[2]] 
-            };
+            });
+
+            t->screen_coordinates = v;
 
             float bb_left_x = width, bb_right_x = 0, bb_top_y = 0, bb_bottom_y = height;
             for (int vertex_no = 0; vertex_no < 3; vertex_no++)
@@ -235,9 +291,21 @@ void render_frame(std::vector<Primitive> world_objects, RenderState render_state
                     bb_top_y = triangle_vertex.y();
             }
 
+            
+            // clamp to left edge
+            bb_left_x = std::max(bb_left_x, 0.0f);
+            //clamp to right edge
+            bb_right_x = std::min(bb_right_x, (float)width);
+            
+            //clamp to bottom edge
+            bb_bottom_y = std::max(bb_bottom_y, 0.0f);
+            //clamp to top edge
+            bb_top_y = std::min(bb_top_y, (float)height);
+            
             //std::cout << "\n --- " << bb_left_x << "," << bb_bottom_y << "," << bb_right_x << "," << bb_top_y << "\n";
 
             Color c = t->color;
+            Triangle tri = *t;
             for (int x = bb_left_x; x < bb_right_x; x++)
             {
                 for (int y = bb_bottom_y; y < bb_top_y; y++)
@@ -248,19 +316,17 @@ void render_frame(std::vector<Primitive> world_objects, RenderState render_state
 
                     int screen_x = (int)floor(sample_x);
                     int screen_y = (int)floor(sample_y);
-                    if (isInside(sample_x, sample_y, v)) {
-                        frame_buffer(screen_x, screen_y, 0, 0) = t->color;
+                    if (isInside(sample_x, sample_y, t->screen_coordinates.data())) {
+                        frame_buffer(screen_x, screen_y) = t->color;
                     }*/
                     
-                    
-
-                    
-                    auto checker = [v,c](float sample_x, float sample_y) {
-                        bool inside = isInside(sample_x, sample_y, v); 
-                        return std::tuple<bool, Color>{inside, c};
+                    auto checker = [t](float sample_x, float sample_y) {
+                        bool inside = isInside(sample_x, sample_y, t->screen_coordinates.data());
+                        return std::tuple<bool, Triangle>{inside, *t};
                     };
 
-                    frame_buffer.sample(x, y, checker);
+                    sample(x, y, xsamples, ysamples, frame_buffer, z_buffer, *t);
+                    
                     
                     
                     
