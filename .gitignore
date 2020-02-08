@@ -4,3 +4,4 @@ packages/*
 *.vcxproj*
 packages.config
 Debug/*
+x64/*
