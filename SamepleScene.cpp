@@ -64,38 +64,6 @@ void SampleScene1(void) {
 
 }
 
-//void SampleScene1(void) {
-//	int i;
-//	int nf;
-//	float slopex, slopey, slopez;
-//	char name[50];
-//
-//	RtColor red = { 1,0,0 };
-//	RtColor green = { 0,1,0 };
-//	RtColor blue = { 0,0,1 };
-//	RtColor white = { 1,1,1 };
-//
-//
-//	RtPoint p1 = { 30,0,10 }; /* ball's initial position */
-//	RtPoint p2 = { 0,20,10 }; /* ball's final position  */
-//
-//
-//	RtFloat fov = 45;
-//	RtFloat intensity1 = 0.1;
-//	RtFloat intensity2 = 1.5;
-//	RtInt init = 0, end = 1;
-//
-//
-//	nf = 100; /* number of frames to output */
-//	slopex = (p2[0] - p1[0]) / nf;
-//	slopey = (p2[1] - p1[1]) / nf;
-//	slopez = (p2[2] - p1[2]) / nf;
-//
-//	RiBegin(RI_NULL);
-//	RiFormat(320, 240, 1);
-//	RiPixelSamples(2, 2);
-//	RiShutter(0, 1);
-//
 //	/* loop through all the frames */
 //	for (i = 1; i <= nf; i++) {
 //		RiFrameBegin(i);
@@ -148,6 +116,24 @@ void SampleScene1(void) {
 
 int main(void) {
 	// select which scene to render
-	//SampleScene1();
-	render_perspective_projection();
+	SampleScene1();
+
+	//Eigen::Vector4f p[3];
+	//p[0] << -0.9, 0.9, 0, 1;
+	//p[1] << -0.9, -0.9, 0, 1;
+	////p[2] << 20, 2, 0, 1;
+
+
+	//std::vector<Eigen::Vector4f> points;
+	//for (int i = 0; i < 2; ++i) {
+	//	float screen_x = (p[i].x() + 1.0f) * 0.5f * 100;
+	//	float screen_y = (1 - (p[i].y() + 1) * 0.5) * 100;
+
+	//	std::cout << screen_x << "," << screen_y << "\n";
+	//	points.push_back(Eigen::Vector4f(screen_x, screen_y, p[i].z(), p[i].w()));
+	//}
+
+	//
+	//pimage(points);
+	//render_perspective_projection();
 }
