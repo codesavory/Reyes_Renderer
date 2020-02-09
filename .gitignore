@@ -1,0 +1,7 @@
+packages/*
+.vs/*
+*.sln
+*.vcxproj*
+packages.config
+Debug/*
+x64/*
