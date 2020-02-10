@@ -130,7 +130,7 @@ void RiFrameEnd() {
 	//auto world_mesh = world_state.world_mesh;
 	auto world_to_view_transformation = render_state.transformation;
 	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 0, 50);
-	auto view_to_frame_transformation = get_perspective_projection_matrix(90.0, 1.0, 0.0, 100);
+	auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 1, 100);
 
 	for (int i = 0; i < world_objects.size(); ++i) {
 		auto& object = world_objects[i];
@@ -140,7 +140,11 @@ void RiFrameEnd() {
 		for (int j = 0; j < object.vertices.size(); ++j) {
 			auto p = object.vertices[j];
 			p = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix * p;
-			p /= p.w();
+			//p /= p.w();
+			// For some reason x axis and y axis are flipped, so multiplying by -1
+			p.x() = p.x() / p.w() * -1;
+			p.y() = p.y() / p.w() * -1;
+			p.z() = p.z() / p.w();
 			ndc_points.push_back(p);
 		}
 		object.transformed_points = ndc_points;
