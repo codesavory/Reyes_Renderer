@@ -5,3 +5,4 @@ packages/*
 packages.config
 Debug/*
 x64/*
+Release/*
