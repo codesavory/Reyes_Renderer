@@ -12,7 +12,7 @@ void SampleScene1(void) {
 	float slopex, slopey, slopez;
 	char name[50];
 
-	RtColor red = { 0.5,0,0 };
+	RtColor red = { 1,0,0 };
 	RtColor green = { 0,1,0 };
 	RtColor blue = { 0,0,1 };
 	RtColor white = { 1,1,1 };
@@ -35,7 +35,7 @@ void SampleScene1(void) {
 
 	RiBegin(RI_NULL);
 
-	RiFormat(50, 50, 1);
+	RiFormat(500, 500, 1);
 	RiPixelSamples(2, 2);
 	RiShutter(0, 1);
 
@@ -46,13 +46,15 @@ void SampleScene1(void) {
 	RiWorldBegin();
 	RiTransformBegin();
 
-	RiTranslate(0, 0, 0);
+	RiTranslate(0, 0, -10);
 	RiColor(red);
-	RiSphere(20, 0, 0, 0);
+	RiSphere(15, 0, 0, 0);
+	RiTransformEnd();
 
-	//RiTranslate(0, 0, -30);
-	//RiColor(blue);
-	//RiSphere(10, 0, 0, 0);
+	RiTransformBegin();
+	RiTranslate(10, 0, 10);
+	RiColor(blue);
+	RiSphere(5, 0, 0, 0);
 	
 	
 	//RiTorus(40, 20, 0, 0, 0);
