@@ -3,6 +3,7 @@
 #include<Eigen/Eigen>
 
 #define PI 3.141592653589793238462643383279502884197
+#define MICROPOLYGONS_PER_PIXEL 2
 
 class Color {
 public:
@@ -39,8 +40,20 @@ public:
 class Triangle {
 public:
     std::vector<int> vert_ids;
-    Color color;
+    std::vector<Color> color;
     std::vector<Eigen::Vector4f> screen_coordinates;
+
+    int ids[3];
+};
+
+class Mesh {
+public:
+    float width, heigth;
+    float dice_factor;
+    std::vector<Eigen::Vector4f> points;
+    //std::vector<Eigen::Vector4f> normals;
+    //std::vector<Color> vertex_colors;
+    std::vector<Triangle> triangles;
 };
 
 class Primitive {
@@ -50,8 +63,45 @@ public:
     Eigen::Matrix4f model_to_world_matrix;
     std::vector<Eigen::Vector4f> transformed_points;
 
-    // primitive color
-    //Color color;
+    Eigen::Vector4f b_cube_vertices[8];
+
+    int get_dice_factor(Eigen::Matrix4f mvp, int width, int height) {
+
+        float bb_left_x = std::numeric_limits<float>::infinity();
+        float bb_right_x = -1 * std::numeric_limits<float>::infinity();
+        float bb_top_y = -1 * std::numeric_limits<float>::infinity(); 
+        float bb_bottom_y = std::numeric_limits<float>::infinity();
+
+        for (int i = 0; i < 8; ++i) {
+            auto p = b_cube_vertices[i];
+            p = mvp * p;
+            p.x() = p.x() / p.w();
+            p.y() = p.y() / p.w();
+            p.z() = p.z() / p.w();
+
+            float screen_x = (p.x() + 1.0f) * 0.5f * width;
+            float screen_y = (1.0 - (p.y() + 1.0f) * 0.5f) * height;
+
+            if (screen_x < bb_left_x)
+                bb_left_x = screen_x;
+            if (screen_x > bb_right_x)
+                bb_right_x = screen_x;
+            if (screen_y < bb_bottom_y)
+                bb_bottom_y = screen_y;
+            if (screen_y > bb_top_y)
+                bb_top_y = screen_y;
+        }
+
+        //if it will be on the screen, how many pixels will it take up?
+        int xFactor = (bb_right_x - bb_left_x) * MICROPOLYGONS_PER_PIXEL;
+        int yFactor = (bb_top_y - bb_bottom_y) * MICROPOLYGONS_PER_PIXEL;
+
+        //choose the largest dimension
+        int dice_factor = std::max(xFactor, yFactor);
+        //can't be higher than screen resolution*MICROPOLYGONS_PER_PIXEL
+        dice_factor = std::min(dice_factor, std::max(width, height) * MICROPOLYGONS_PER_PIXEL * 2);
+        return dice_factor;
+    }
 };
 
 class Sphere : public Primitive {
@@ -68,27 +118,27 @@ public:
     void add_triangle(int a, int b, int c) {
         Triangle t;
         t.vert_ids = { a,b,c };
-        t.color = primitive_color;
+        t.color = { primitive_color, primitive_color, primitive_color };
         triangles.push_back( t );
     }
 
     void add_quad(int a, int b, int c, int d) {
         Triangle p;
         p.vert_ids = { a,b,c };
-        p.color = primitive_color;
+        p.color = { primitive_color, primitive_color, primitive_color };
         triangles.push_back( p );
 
         Triangle q;
         q.vert_ids = { a,c,d };
-        q.color = primitive_color;
+        q.color = { primitive_color, primitive_color, primitive_color };
         triangles.push_back( q );
     }
 
     
     void build_sphere() {
 
-        int parallels = 15;
-        int meridians = 15;
+        int parallels = 20;
+        int meridians = 20;
         float const r = radius;
 
         vertices.push_back(Eigen::Vector4f(0.0f, r, 0.0f, 1.0f));
