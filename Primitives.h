@@ -37,35 +37,68 @@ public:
     }
 };
 
+
 class Triangle {
 public:
-    std::vector<int> vert_ids;
-    std::vector<Color> color;
-    std::vector<Eigen::Vector4f> screen_coordinates;
+    Color colors[3];
+    Eigen::Vector4f screen_coordinates[3];
+    int u_vals[3];
+    int v_vals[3];
+};
 
+
+struct TriangleVerts {
     int ids[3];
 };
 
-class Mesh {
-public:
-    float width, heigth;
-    float dice_factor;
-    std::vector<Eigen::Vector4f> points;
-    //std::vector<Eigen::Vector4f> normals;
-    //std::vector<Color> vertex_colors;
-    std::vector<Triangle> triangles;
-};
 
 class Primitive {
 public:
-    std::vector<Eigen::Vector4f> vertices;
-    std::vector<Triangle> triangles;
-    Eigen::Matrix4f model_to_world_matrix;
-    std::vector<Eigen::Vector4f> transformed_points;
-
     Eigen::Vector4f b_cube_vertices[8];
+    Eigen::Matrix4f mvp;
+    int dice_factor;
+    Color primitive_color;
 
-    int get_dice_factor(Eigen::Matrix4f mvp, int width, int height) {
+    std::vector<Eigen::Vector4f> points;
+    std::vector<Eigen::Vector4f> normals;
+    std::vector<Color> vertex_colors;
+    std::vector<TriangleVerts> triangle_verts;
+    std::vector<int>u_vals;
+    std::vector<int>v_vals;
+    
+
+    void set_primitive_color() {
+        vertex_colors.resize(points.size());
+        for (int i = 0; i < points.size(); ++i) {
+            vertex_colors[i] = primitive_color;
+        }
+    }
+
+    void add_triangle(int a, int b, int c) {
+        TriangleVerts t;
+        t.ids[0] = a;
+        t.ids[1] = b;
+        t.ids[2] = c;
+        triangle_verts.push_back(t);
+    }
+
+    void add_quad(int a, int b, int c, int d) {
+        TriangleVerts p;
+        p.ids[0] = a;
+        p.ids[1] = b;
+        p.ids[2] = c;
+
+        TriangleVerts q;
+        q.ids[0] = a;
+        q.ids[1] = c;
+        q.ids[2] = d;
+
+        triangle_verts.push_back(p);
+        triangle_verts.push_back(q);
+    }
+
+
+    int get_dice_factor(int width, int height) {
 
         float bb_left_x = std::numeric_limits<float>::infinity();
         float bb_right_x = -1 * std::numeric_limits<float>::infinity();
@@ -75,8 +108,8 @@ public:
         for (int i = 0; i < 8; ++i) {
             auto p = b_cube_vertices[i];
             p = mvp * p;
-            p.x() = p.x() / p.w();
-            p.y() = p.y() / p.w();
+            p.x() = p.x() / p.w() * -1;
+            p.y() = p.y() / p.w() * -1;
             p.z() = p.z() / p.w();
 
             float screen_x = (p.x() + 1.0f) * 0.5f * width;
@@ -102,46 +135,76 @@ public:
         dice_factor = std::min(dice_factor, std::max(width, height) * MICROPOLYGONS_PER_PIXEL * 2);
         return dice_factor;
     }
+
+    virtual void build(int width, int height){}
+
+    void apply_checker_shade() {
+        float CHECK_SIZE_X = 10.0f;
+        float CHECK_SIZE_Y = 10.0f;
+
+        for (int i = 0; i < points.size(); ++i) {
+            auto u = (float)u_vals[i] / (float)(dice_factor - 1);
+            auto v = (float)v_vals[i] / (float)(dice_factor - 1);
+
+            if ((int)(floor(u * CHECK_SIZE_X) + floor(v * CHECK_SIZE_Y)) % 2 == 0) {
+                vertex_colors[i] = Color(255.0f, 255.0f, 255.0f, 1.0f);
+            }
+            else {
+                vertex_colors[i] = Color(0.0f, 0.0f, 0.0f, 1.0f);
+            }
+  
+        }
+    }
 };
+
 
 class Sphere : public Primitive {
 public:
     float radius;
-    Color primitive_color;
 
     Sphere(float r, Color color) {
         radius = r;
         primitive_color = color;
-        build_sphere();
     }
 
-    void add_triangle(int a, int b, int c) {
-        Triangle t;
-        t.vert_ids = { a,b,c };
-        t.color = { primitive_color, primitive_color, primitive_color };
-        triangles.push_back( t );
+    void get_bounding_cube() {
+        // top plane
+        b_cube_vertices[0] = Eigen::Vector4f(-1 * radius,   -1 * radius,    radius,         1.0f);
+        b_cube_vertices[1] = Eigen::Vector4f(   radius,     -1 * radius,    radius,         1.0f);
+
+        b_cube_vertices[2] = Eigen::Vector4f(   radius,     radius,     radius,     1.0f);
+        b_cube_vertices[3] = Eigen::Vector4f(-1 * radius,   radius,     radius,     1.0f);
+
+        // bottom plane
+        b_cube_vertices[4] = Eigen::Vector4f(-1 * radius,   -1 * radius,    -1 * radius,    1.0f);
+        b_cube_vertices[5] = Eigen::Vector4f(   radius,     -1 * radius,    -1 * radius,    1.0f);
+
+        b_cube_vertices[6] = Eigen::Vector4f(   radius,         radius,     -1 * radius,    1.0f);
+        b_cube_vertices[7] = Eigen::Vector4f(-1 * radius,       radius,     -1 * radius,    1.0f);
     }
 
-    void add_quad(int a, int b, int c, int d) {
-        Triangle p;
-        p.vert_ids = { a,b,c };
-        p.color = { primitive_color, primitive_color, primitive_color };
-        triangles.push_back( p );
+    virtual void build(int width, int height) {
+        get_bounding_cube();
+        int dicefactor = get_dice_factor(width, height);
+        this->dice_factor = dicefactor;
 
-        Triangle q;
-        q.vert_ids = { a,c,d };
-        q.color = { primitive_color, primitive_color, primitive_color };
-        triangles.push_back( q );
-    }
-
-    
-    void build_sphere() {
-
-        int parallels = 20;
-        int meridians = 20;
+        int const parallels = dicefactor;
+        int const meridians = dicefactor;
         float const r = radius;
 
-        vertices.push_back(Eigen::Vector4f(0.0f, r, 0.0f, 1.0f));
+        points.resize(dicefactor * dicefactor + 2);
+        u_vals.resize(dicefactor * dicefactor + 2);
+        v_vals.resize(dicefactor * dicefactor + 2);
+        vertex_colors.resize(dicefactor * dicefactor + 2);
+
+        int pid = 0;
+
+        points[pid] = Eigen::Vector4f(0.0f, r, 0.0f, 1.0f);
+        u_vals[pid] = 0;
+        v_vals[pid] = 0;
+        ++pid;
+        
+
         for (int j = 0; j < parallels - 1; ++j)
         {
             double const polar = PI * double(j + 1) / double(parallels);
@@ -160,11 +223,18 @@ public:
                 p[1] = y;
                 p[2] = z;
                 p[3] = 1.0f;
-                vertices.push_back(p);
+                points[pid] = p;
+                u_vals[pid] = j;
+                v_vals[pid] = i;
+                ++pid;
+                
             }
+            
         }
-        vertices.push_back(Eigen::Vector4f(0.0f, -1 * r, 0.0f, 1.0f));
-        
+
+        points[pid] = Eigen::Vector4f(0.0f, -1 * r, 0.0f, 1.0f);
+        u_vals[pid] = u_vals[pid - 1];
+        v_vals[pid] = v_vals[pid - 1];
 
         for (int i = 0; i < meridians; ++i)
         {
@@ -191,47 +261,28 @@ public:
         {
             int const a = i + meridians * (parallels - 2) + 1;
             int const b = (i + 1) % meridians + meridians * (parallels - 2) + 1;
-            add_triangle(vertices.size() - 1, a, b);
+            add_triangle(points.size() - 1, a, b);
         }
-        
-    }
-    
+
+        set_primitive_color();
+    }   
+
 };
 
-
-//std::vector<Eigen::Vector4f> sphere_mesh(double radius)
-//{
-//    std::vector<Eigen::Vector4f> points;
-//    int parallels = 25;
-//    int meridians = 25;
-//    double r = radius;
-//    //points.push_back(Eigen::Vector4f(0.0f, r, 0.0f));
-//    for (int j = 0; j < parallels - 1; ++j)
-//    {
-//        double const polar = PI * double(j + 1) / double(parallels);
-//        double const sp = std::sin(polar);
-//        double const cp = std::cos(polar);
-//        for (int i = 0; i < meridians; ++i)
-//        {
-//            double const azimuth = 2.0 * PI * double(i) / double(meridians);
-//            double const sa = std::sin(azimuth);
-//            double const ca = std::cos(azimuth);
-//            float const x = r * sp * ca;
-//            float const y = r * cp;
-//            float const z = r * sp * sa;
-//            Eigen::Vector4f p;
-//            p[0] = x;
-//            p[1] = y;
-//            p[2] = z;
-//            p[3] = 1.0;
-//            points.push_back(p);
-//        }
+//class Torus : public Primitive {
+//public:
+//    float major_r;
+//    float minor_r;
+//    int minor_segments;
+//    int major_segments;
+//
+//    Torus(float major_r, float minor_r, int major_segments, int minor_segments) {
+//        this->major_r = major_r;
+//        this->minor_r = minor_r;
+//        this->major_segments = major_segments;
+//        this->minor_segments = minor_segments;
 //    }
-//    //points.push_back(Eigen::Vector4f(0.0f, -1 * r, 0.0f));
-//    return points;
-//}
-
-
+//};
 //std::vector<Eigen::Vector4f> generate_torus_mesh(double majorRadius, double minorRadius, double minorSegments = 10, double majorSegments = 10)
 //{
 //    std::vector<Eigen::Vector4f> points;
