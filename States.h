@@ -33,8 +33,7 @@ public:
 
 class WorldState {
 public:
-	std::vector<Primitive> objects;
-	std::vector<Eigen::Vector4f> world_mesh;
+	std::vector<std::unique_ptr<Primitive>> object_ptrs;
 };
 
 class RenderState {
