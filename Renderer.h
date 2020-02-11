@@ -5,35 +5,14 @@
 #include "Primitives.h"
 #include "States.h"
 #include <Eigen/Eigen>
-#include <functional>
 #include <iostream>
-#include <tuple>
 #include <numeric>
-
- std::tuple<float, float, float> computeBarycentric2D(float x, float y, Eigen::Vector4f* v)
-{
-    float c1 = (x * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * y + v[1].x() * v[2].y() - v[2].x() * v[1].y()) / (v[0].x() * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * v[0].y() + v[1].x() * v[2].y() - v[2].x() * v[1].y());
-    float c2 = (x * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * y + v[2].x() * v[0].y() - v[0].x() * v[2].y()) / (v[1].x() * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * v[1].y() + v[2].x() * v[0].y() - v[0].x() * v[2].y());
-    float c3 = (x * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * y + v[0].x() * v[1].y() - v[1].x() * v[0].y()) / (v[2].x() * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * v[2].y() + v[0].x() * v[1].y() - v[1].x() * v[0].y());
-    return { c1,c2,c3 };
-}
-
 
 inline
 float edgeFunction(const Eigen::Vector4f& a, const Eigen::Vector4f& b, const Eigen::Vector4f& c)
 {
     return ((c.x() - a.x()) * (b.y() - a.y()) - (c.y() - a.y()) * (b.x() - a.x()));
 }
-
-//inline
-//bool isInside(float x, float y, const Eigen::Vector4f* _v) {
-//    Eigen::Vector4f p(x, y, 0.0, 0.0);
-//    bool inside = true;
-//    inside &= edgeFunction(_v[0], _v[1], p);
-//    inside &= edgeFunction(_v[1], _v[2], p);
-//    inside &= edgeFunction(_v[2], _v[0], p);
-//    return inside;
-//}
 
 
 template <class T>
@@ -124,7 +103,8 @@ public:
 };
 
 
-void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& zb, 
+inline
+void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& zb,
     Triangle t) {
 
     Eigen::Vector3f pixel_color(0, 0, 0);
@@ -136,8 +116,9 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
             float mMax = (float)(m + 1) / xsamples;
             float nMax = (float)(n + 1) / ysamples;
 
-            float x_delta = ((float)rand() / RAND_MAX) * (mMax - mMin) + mMin;
-            float y_delta = ((float)rand() / RAND_MAX) * (nMax - nMin) + nMin;
+            // using random sampling values makes stuff noisy
+            //float x_delta = ((float)rand() / RAND_MAX) * (mMax - mMin) + mMin;
+            //float y_delta = ((float)rand() / RAND_MAX) * (nMax - nMin) + nMin;
 
             float sample_x = x + mMin;
             float sample_y = y + nMin;
@@ -165,46 +146,24 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
 
                 if (z < zb(x, y, m, n).front()) {
                     zb(x, y, m, n).push_front(z);
-                    fb(x, y, m, n) = t.color[0];
+
+                    auto c = t.colors;
+
+                    float r = w0 * c[0].r + w1 * c[1].r + w2 * c[2].r;
+                    float g = w0 * c[0].g + w1 * c[1].g + w2 * c[2].g;
+                    float b = w0 * c[0].b + w1 * c[1].b + w2 * c[2].b;
+                    Color z(r, g, b, 1.0);
+                    fb(x, y, m, n) = t.colors[0];
+
+
                 }
             }
 
-            //if (is_inside) {
-            //    // z buff test
-            //    std::vector<Eigen::Vector4f> v = t.screen_coordinates;
-            //    std::tie(alpha, beta, gamma) = computeBarycentric2D(x, y, v.data());
-            //    float w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-            //    float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-            //    z_interpolated *= w_reciprocal;
-
-
-            //    float curr_depth = zb(x, y, m, n).front();
-            //    //fb(x, y, m, n) = t.color[0]
-            //    if (z_interpolated <= curr_depth) {
-            //        zb(x, y, m, n).push_front(z_interpolated);
-
-            //        auto c = t.color;
-
-            //        //c[0].r /= v[0].w(), c[0].g /= v[0].w(), c[0].b /= v[0].w();
-            //        //c[1].r /= v[1].w(), c[1].g /= v[1].w(), c[1].b /= v[1].w();
-            //        //c[2].r /= v[2].w(), c[2].g /= v[2].w(), c[2].b /= v[2].w();
-
-            //        float r = alpha * c[0].r + beta * c[1].r + gamma * c[2].r;
-            //        float g = alpha * c[0].g + beta * c[1].g + gamma * c[2].g;
-            //        float b = alpha * c[0].b + beta * c[1].b + gamma * c[2].b;
-
-            //        Color z(r, g, b, 1.0);
-            //        fb(x, y, m, n) = z;
-            //    }
-            //    else {
-            //        pixel_color += Eigen::Vector3f(color.r, color.g, color.b);
-            //    }
-            //   
-            //    
-            //}
         }
     }
+
 }
+
 
 void pimage(FrameBuffer frame_buffer) {
     const char* filename = "D:\\stbjpg3.jpg";
@@ -253,8 +212,7 @@ void pimage(FrameBuffer frame_buffer) {
 
 
 
-
-void render_frame(std::vector<Primitive> world_objects, RenderState render_state, ImageState image_state) {
+void render_frame(WorldState& world_state, RenderState& render_state, ImageState& image_state) {
 	const int xsamples = render_state.xsamples;
 	const int ysamples = render_state.ysamples;
 	const int width = image_state.x_resolution;
@@ -264,39 +222,48 @@ void render_frame(std::vector<Primitive> world_objects, RenderState render_state
 	FrameBuffer frame_buffer(width, height, 2, 2);
     ZBuffer z_buffer(width, height, 2, 2);
 
-    //std::vector<Eigen::Vector4f> pix;
+    std::vector<std::unique_ptr<Primitive>>& world_obj_ptrs = world_state.object_ptrs;
 
-	for (int i = 0; i < world_objects.size(); ++i) {
-		Primitive& obj = world_objects[i];
-		auto ndc_points = obj.transformed_points;
+    
+	for (int i = 0; i < world_obj_ptrs.size(); ++i) {
+        std::unique_ptr<Primitive> objPtr = std::move(world_obj_ptrs[i]);
+        objPtr->build(width, height);
 
-        // Convert ndc points to pixel coordinates
-		for (int j = 0; j < ndc_points.size(); ++j) {
-			auto ndc_p = ndc_points[j];
+
+        //Primitive& obj = *objPtr;
+        auto& points = objPtr->points;
+
+        for (int j = 0; j < points.size(); ++j) {
+            auto p = objPtr->points[j];
+            p = objPtr -> mvp * p;
+            // For some reason x axis and y axis are flipped, so multiplying by -1
+            p.x() = p.x() / p.w() * -1;
+            p.y() = p.y() / p.w() * -1;
+            p.z() = p.z() / p.w();
+
 			Eigen::Vector4f pixel_coordinate_space;
 
-			float screen_x = (ndc_p.x() + 1.0f) * 0.5f * width;
-			float screen_y = (1.0 - (ndc_p.y() + 1.0f) * 0.5f) * height;
+			float screen_x = (p.x() + 1.0f) * 0.5f * width;
+			float screen_y = (1.0 - (p.y() + 1.0f) * 0.5f) * height;
 
-			pixel_coordinate_space << screen_x, screen_y, ndc_p.z(), ndc_p.w();
-			obj.transformed_points[j] = pixel_coordinate_space;
+            p.x() = screen_x;
+            p.y() = screen_y;
 
-            //if (screen_x < 0 || screen_x > width || screen_y< 0 || screen_y > height) continue;
-            //frame_buffer(screen_x, screen_y) = Color(255, 255, 255, 1);
+			points[j] = p;
 		}
         
+
         // Sample triangles
-        auto& triangles = obj.triangles;
-        auto& pixel_points = obj.transformed_points;
-        for (auto t = triangles.begin(); t != triangles.end(); ++t) {
+        std::vector<TriangleVerts> triangle_vert_groups = objPtr->triangle_verts;
+        for (int j = 0; j < triangle_vert_groups.size(); ++j){
+
+            auto triangle_vert_ids = triangle_vert_groups[j].ids;
 
             std::vector<Eigen::Vector4f> v({ 
-                pixel_points[t->vert_ids[0]], 
-                pixel_points[t->vert_ids[1]], 
-                pixel_points[t->vert_ids[2]] 
+                points[triangle_vert_ids[0]],
+                points[triangle_vert_ids[1]],
+                points[triangle_vert_ids[2]]
             });
-
-            t->screen_coordinates = v;
 
             float bb_left_x = width, bb_right_x = 0, bb_top_y = 0, bb_bottom_y = height;
             for (int vertex_no = 0; vertex_no < 3; vertex_no++)
@@ -322,12 +289,30 @@ void render_frame(std::vector<Primitive> world_objects, RenderState render_state
             //clamp to top edge
             bb_top_y = std::min(bb_top_y, (float)height);
 
-            Triangle tri = *t;
+            
+
             for (int x = bb_left_x; x < bb_right_x; x++)
             {
                 for (int y = bb_bottom_y; y < bb_top_y; y++)
                 {
-                    sample(x, y, xsamples, ysamples, frame_buffer, z_buffer, *t);   
+                    Triangle tri;
+                    tri.screen_coordinates[0] = v[0];
+                    tri.screen_coordinates[1] = v[1];
+                    tri.screen_coordinates[2] = v[2];
+
+                    tri.colors[0] = objPtr->vertex_colors[triangle_vert_ids[0]];
+                    tri.colors[1] = objPtr->vertex_colors[triangle_vert_ids[1]];
+                    tri.colors[2] = objPtr->vertex_colors[triangle_vert_ids[2]];
+
+                    tri.u_vals[0] = objPtr->u_vals[triangle_vert_ids[0]];
+                    tri.u_vals[1] = objPtr->u_vals[triangle_vert_ids[1]];
+                    tri.u_vals[2] = objPtr->u_vals[triangle_vert_ids[2]];
+
+                    tri.v_vals[0] = objPtr->v_vals[triangle_vert_ids[0]];
+                    tri.v_vals[1] = objPtr->v_vals[triangle_vert_ids[1]];
+                    tri.v_vals[2] = objPtr->v_vals[triangle_vert_ids[2]];
+
+                    sample(x, y, xsamples, ysamples, frame_buffer, z_buffer, tri);   
                 }
             }
 
@@ -335,10 +320,8 @@ void render_frame(std::vector<Primitive> world_objects, RenderState render_state
 
         }
         
-
-        //break;
-        
 	}
 
     pimage(frame_buffer);
+    
 }
