@@ -2,7 +2,6 @@
 #include "States.h"
 #include "Primitives.h"
 #include "Renderer.h"
-//#include "Image.h"
 #include <iostream>
 
 #define PI 3.141592653589793238462643383279502884197
@@ -125,32 +124,7 @@ void RiWorldEnd() {
 
 
 void RiFrameEnd() {
-	
-	auto world_objects = world_state.objects;
-	//auto world_mesh = world_state.world_mesh;
-	auto world_to_view_transformation = render_state.transformation;
-	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 0, 50);
-	auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 1, 100);
-
-	for (int i = 0; i < world_objects.size(); ++i) {
-		auto& object = world_objects[i];
-		auto model_to_world_matrix = object.model_to_world_matrix;
-		std::vector<Eigen::Vector4f> ndc_points;
-
-		for (int j = 0; j < object.vertices.size(); ++j) {
-			auto p = object.vertices[j];
-			p = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix * p;
-			//p /= p.w();
-			// For some reason x axis and y axis are flipped, so multiplying by -1
-			p.x() = p.x() / p.w() * -1;
-			p.y() = p.y() / p.w() * -1;
-			p.z() = p.z() / p.w();
-			ndc_points.push_back(p);
-		}
-		object.transformed_points = ndc_points;
-	}
-	render_frame(world_objects, render_state, image_state);
-
+	render_frame(world_state, render_state, image_state);
 }
 
 void RiTransformBegin() {
@@ -180,43 +154,18 @@ void RiTranslate(RtFloat dx, RtFloat dy, RtFloat dz) {
 	}
 }
 
-std::vector<Eigen::Vector4f> sphere_mesh(double radius)
-{
-	std::vector<Eigen::Vector4f> points;
-	int parallels = 25;
-	int meridians = 25;
-	double r = radius;
-	//points.push_back(Eigen::Vector4f(0.0f, r, 0.0f));
-	for (int j = 0; j < parallels - 1; ++j)
-	{
-		double const polar = PI * double(j + 1) / double(parallels);
-		double const sp = std::sin(polar);
-		double const cp = std::cos(polar);
-		for (int i = 0; i < meridians; ++i)
-		{
-			double const azimuth = 2.0 * PI * double(i) / double(meridians);
-			double const sa = std::sin(azimuth);
-			double const ca = std::cos(azimuth);
-			float const x = r * sp * ca;
-			float const y = r * cp;
-			float const z = r * sp * sa;
-			Eigen::Vector4f p;
-			p[0] = x;
-			p[1] = y;
-			p[2] = z;
-			p[3] = 1.0;
-			points.push_back(p);
-		}
-	}
-	//points.push_back(Eigen::Vector4f(0.0f, -1 * r, 0.0f));
-	return points;
-}
-
 void RiSphere(float radius, float zmin, float zmax, float tmax) {
 	auto model_to_world_matrix = transformation_state.current_transformation;
-	Sphere sphere = Sphere(radius, render_state.current_color);
-	sphere.model_to_world_matrix = model_to_world_matrix;
-	world_state.objects.push_back(sphere);	
+	auto world_to_view_transformation = render_state.transformation;
+	auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 1, 100);
+
+	const int width = image_state.x_resolution;
+	const int height = image_state.y_resolution;
+
+	std::unique_ptr<Primitive> sphere_ptr = std::make_unique<Sphere>(radius, render_state.current_color);
+	sphere_ptr -> mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+	world_state.object_ptrs.push_back(std::move(sphere_ptr));
+	
 }
 
 
