@@ -1,9 +1,15 @@
 #pragma once
-#include "Ri.h"
+#ifndef STB_IMAGE_IMPLEMENTATION
+#define STBI_MSC_SECURE_CRT
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#endif
 #include<Eigen/Eigen>
 
 #define PI 3.141592653589793238462643383279502884197
-#define MICROPOLYGONS_PER_PIXEL 2
+#define MICROPOLYGONS_PER_PIXEL 1
+
+
 
 class Color {
 public:
@@ -51,6 +57,11 @@ struct TriangleVerts {
     int ids[3];
 };
 
+struct UVPoint {
+    int u;
+    int v;
+};
+
 
 class Primitive {
 public:
@@ -63,9 +74,7 @@ public:
     std::vector<Eigen::Vector4f> normals;
     std::vector<Color> vertex_colors;
     std::vector<TriangleVerts> triangle_verts;
-    std::vector<int>u_vals;
-    std::vector<int>v_vals;
-    
+
 
     void set_primitive_color() {
         vertex_colors.resize(points.size());
@@ -95,6 +104,22 @@ public:
 
         triangle_verts.push_back(p);
         triangle_verts.push_back(q);
+    }
+
+    void build_mesh() {
+        for (int u = 0; u < dice_factor - 1; ++u)
+        {
+            int aStart = u * dice_factor;
+            int bStart = (u + 1) * dice_factor;
+            for (int v = 0; v < dice_factor - 1; ++v)
+            {
+                int const a = aStart + v;
+                int const a1 = aStart + (v + 1);
+                int const b = bStart + v;
+                int const b1 = bStart + (v + 1);
+                add_quad(a, a1, b1, b);
+            }
+        }
     }
 
 
@@ -136,15 +161,28 @@ public:
         return dice_factor;
     }
 
-    virtual void build(int width, int height){}
+    virtual void build(int width, int height) = 0;
+
+    inline UVPoint get_uv(int id) {
+        int u = id / dice_factor;
+        int v = id - (u * dice_factor);;
+
+        UVPoint p;
+        p.u = u;
+        p.v = v;
+        return p;
+    }
 
     void apply_checker_shade() {
         float CHECK_SIZE_X = 10.0f;
         float CHECK_SIZE_Y = 10.0f;
 
         for (int i = 0; i < points.size(); ++i) {
-            auto u = (float)u_vals[i] / (float)(dice_factor - 1);
-            auto v = (float)v_vals[i] / (float)(dice_factor - 1);
+            UVPoint p = get_uv(i);
+            auto u = (float)p.u / (float)(dice_factor - 1);
+            auto v = (float)p.v / (float)(dice_factor - 1);
+            
+
 
             if ((int)(floor(u * CHECK_SIZE_X) + floor(v * CHECK_SIZE_Y)) % 2 == 0) {
                 vertex_colors[i] = Color(255.0f, 255.0f, 255.0f, 1.0f);
@@ -155,16 +193,49 @@ public:
   
         }
     }
+
+    void texture_map() {
+        int x, y, n;
+        unsigned char* data = stbi_load("2k_earth_nightmap.jpg", &x, &y, &n, 0);
+
+        for (int i = 0; i < points.size(); ++i) {
+            UVPoint p = get_uv(i);
+            auto u = (float)p.u / (float)(dice_factor - 1);
+            auto v = (float)p.v / (float)(dice_factor - 1);
+
+            int img_x = u * (x);    
+            int img_y = v * (y);
+
+            img_x = img_x % x;
+            img_y = img_y % y;
+
+            // we want image processing to start from top left corner
+            // instead of bottom left corner. So flipping x and y in index value
+            int id = (img_y * x + img_x)*3;
+            int r = data[id];
+            int g = data[id + 1];
+            int b = data[id + 2];
+
+            vertex_colors[i] = Color(r, g, b, 1.0);
+        }
+
+        stbi_image_free(data);
+    }
+    
 };
 
 
 class Sphere : public Primitive {
 public:
     float radius;
+    float phimin, phimax, thetamax;
 
-    Sphere(float r, Color color) {
-        radius = r;
-        primitive_color = color;
+    Sphere(float r, float zmin, float zmax, float tmax) {
+        this -> radius = r;
+        
+        this->phimin = (zmin > -radius) ? asin(zmin / radius) : -1 * PI / 2;
+        this->phimax = (zmax < radius) ? asin(zmax / radius) : PI / 2;
+        this->thetamax = tmax * PI / 180.0f;
     }
 
     void get_bounding_cube() {
@@ -192,126 +263,199 @@ public:
         int const meridians = dicefactor;
         float const r = radius;
 
-        points.resize(dicefactor * dicefactor + 2);
-        u_vals.resize(dicefactor * dicefactor + 2);
-        v_vals.resize(dicefactor * dicefactor + 2);
-        vertex_colors.resize(dicefactor * dicefactor + 2);
+        points.resize(dicefactor * dicefactor);
+        vertex_colors.resize(dicefactor * dicefactor);
 
-        int pid = 0;
+        int i = 0;
+        for (int u = 0; u < dice_factor; ++u) {
+            for (int v = 0; v < dice_factor; ++v) {
+                Eigen::Vector4f position;
 
-        points[pid] = Eigen::Vector4f(0.0f, r, 0.0f, 1.0f);
-        u_vals[pid] = 0;
-        v_vals[pid] = 0;
-        ++pid;
-        
+                float u_n = (float)u / ((float)dice_factor - 1);
+                float v_n = (float)v / ((float)dice_factor - 1);
 
-        for (int j = 0; j < parallels - 1; ++j)
-        {
-            double const polar = PI * double(j + 1) / double(parallels);
-            double const sp = std::sin(polar);
-            double const cp = std::cos(polar);
-            for (int i = 0; i < meridians; ++i)
-            {
-                double const azimuth = 2.0 * PI * double(i) / double(meridians);
-                double const sa = std::sin(azimuth);
-                double const ca = std::cos(azimuth);
-                float const x = r * sp * ca;
-                float const y = r * cp;
-                float const z = r * sp * sa;
-                Eigen::Vector4f p;
-                p[0] = x;
-                p[1] = y;
-                p[2] = z;
-                p[3] = 1.0f;
-                points[pid] = p;
-                u_vals[pid] = j;
-                v_vals[pid] = i;
-                ++pid;
-                
+                float phi = phimin + v_n * (phimax - phimin);
+                float theta = u_n * thetamax;
+
+                position.x() = radius * std::cos(theta) * std::cos(phi);
+                position.y() = radius * std::sin(theta) * std::cos(phi);
+                position.z() = radius * std::sin(phi);
+                position.w() = 1.0f;
+
+                points[i] = position;
+                ++i;
             }
-            
         }
-
-        points[pid] = Eigen::Vector4f(0.0f, -1 * r, 0.0f, 1.0f);
-        u_vals[pid] = u_vals[pid - 1];
-        v_vals[pid] = v_vals[pid - 1];
-
-        for (int i = 0; i < meridians; ++i)
+        /*
+        for (int u = 0; u < dice_factor - 1; ++u)
         {
-            int const a = i + 1;
-            int const b = (i + 1) % meridians + 1;
-            add_triangle(0, b, a);
-        }
-
-        for (int j = 0; j < parallels - 2; ++j)
-        {
-            int aStart = j * meridians + 1;
-            int bStart = (j + 1) * meridians + 1;
-            for (int i = 0; i < meridians; ++i)
+            int aStart = u * dice_factor;
+            int bStart = (u + 1) * dice_factor;
+            for (int v = 0; v < dice_factor - 1; ++v)
             {
-                int const a = aStart + i;
-                int const a1 = aStart + (i + 1) % meridians;
-                int const b = bStart + i;
-                int const b1 = bStart + (i + 1) % meridians;
+                int const a = aStart + v;
+                int const a1 = aStart + (v + 1);
+                int const b = bStart + v;
+                int const b1 = bStart + (v + 1);
                 add_quad(a, a1, b1, b);
             }
         }
-
-        for (int i = 0; i < meridians; ++i)
-        {
-            int const a = i + meridians * (parallels - 2) + 1;
-            int const b = (i + 1) % meridians + meridians * (parallels - 2) + 1;
-            add_triangle(points.size() - 1, a, b);
-        }
-
-        set_primitive_color();
+        */
+        build_mesh();
+        apply_checker_shade();
+        //texture_map();
     }   
 
 };
 
-//class Torus : public Primitive {
-//public:
-//    float major_r;
-//    float minor_r;
-//    int minor_segments;
-//    int major_segments;
-//
-//    Torus(float major_r, float minor_r, int major_segments, int minor_segments) {
-//        this->major_r = major_r;
-//        this->minor_r = minor_r;
-//        this->major_segments = major_segments;
-//        this->minor_segments = minor_segments;
-//    }
-//};
-//std::vector<Eigen::Vector4f> generate_torus_mesh(double majorRadius, double minorRadius, double minorSegments = 10, double majorSegments = 10)
-//{
-//    std::vector<Eigen::Vector4f> points;
-//    // minor radius is the thickness of the torus / 2
-//    auto PI2 = PI * 2;
-//    auto arc = PI * 2;
-//
-//    //Eigen::Vector3f center = { 0, 0, 0 };
-//
-//    for (double j = 0; j < minorSegments; ++j) {
-//        for (double i = 0; i < majorSegments; ++i) {
-//            double const u = i / majorSegments * arc;
-//            double const v = j / minorSegments * PI2;
-//
-//            //center[0] = majorRadius * std::cos(u);
-//            //center[1] = majorRadius * std::sin(u);
-//
-//            float const x = (majorRadius + minorRadius * std::cos(v)) * std::cos(u);
-//            float const y = (majorRadius + minorRadius * std::cos(v)) * std::sin(u);
-//            float const z = minorRadius * std::sin(v);
-//
-//            Eigen::Vector4f vertex;
-//            vertex[0] = x;
-//            vertex[1] = y;
-//            vertex[2] = z;
-//            vertex[3] = 1;
-//
-//            points.push_back(vertex);
-//        }
-//    }
-//    return points;
-//}
+
+class Cylinder : public Primitive {
+public:
+    float radius, zmin, zmax, thetamax;
+
+    Cylinder(float radius, float zmin, float zmax, float tmax) {
+        this->radius = radius;
+        this->zmax = zmax;
+        this->zmin = zmin;
+
+        //calculate necessary parameters (in radians)
+        this->thetamax = tmax * PI / 180.0f;
+    }
+
+    void get_bounding_cube() {
+        b_cube_vertices[0] = Eigen::Vector4f(radius, radius, zmin, 1.0f);
+        b_cube_vertices[1] = Eigen::Vector4f(-1*radius, radius, zmin, 1.0f);
+        b_cube_vertices[2] = Eigen::Vector4f(-1 * radius, -1*radius, zmin, 1.0f);
+        b_cube_vertices[3] = Eigen::Vector4f(radius, -1*radius, zmin, 1.0f);
+
+        b_cube_vertices[4] = Eigen::Vector4f(radius, radius, zmax, 1.0f);
+        b_cube_vertices[5] = Eigen::Vector4f(-1 * radius, radius, zmax, 1.0f);
+        b_cube_vertices[6] = Eigen::Vector4f(-1 * radius, -1 * radius, zmax, 1.0f);
+        b_cube_vertices[7] = Eigen::Vector4f(radius, -1 * radius, zmax, 1.0f);
+    }
+
+    virtual void build(int width, int height) {
+        get_bounding_cube();
+        dice_factor = get_dice_factor(width, height);
+        points.resize(dice_factor * dice_factor);
+        vertex_colors.resize(dice_factor * dice_factor);
+
+        int i = 0;
+        for (int u = 0; u < dice_factor; ++u) {
+            for (int v = 0; v < dice_factor; ++v) {
+                Eigen::Vector4f position;
+                
+                float u_n = (float)u / ((float)dice_factor - 1);
+                float v_n = (float)v / ((float)dice_factor - 1);
+
+                float theta = u_n * thetamax;
+
+                position.x() = radius * cos(theta);
+                position.y() = radius * sin(theta);
+                position.z() = zmin + v_n * (zmax - zmin);
+                position.w() = 1.0f;
+
+                points[i] = position;
+                ++i;
+            }
+        }
+
+        for (int u = 0; u < dice_factor-1; ++u)
+        {
+            int aStart = u * dice_factor;
+            int bStart = (u + 1) * dice_factor;
+            for (int v = 0; v < dice_factor-1; ++v)
+            {
+                int const a = aStart + v;
+                int const a1 = aStart + (v + 1);
+                int const b = bStart + v;
+                int const b1 = bStart + (v + 1);
+                add_quad(a, a1, b1, b);
+            }
+        }
+
+        //set_primitive_color();
+        apply_checker_shade();
+    }
+};
+
+class Torus : public Primitive {
+public:
+    float major_r;
+    float minor_r;
+
+    float phi_min, phi_max, theta_max;
+
+    Torus(float major_r, float minor_r, float pmin, float pmax, float tmax) {
+        this->major_r = major_r;
+        this->minor_r = minor_r;
+
+        this->phi_min = pmin * PI / 180.0f;
+        this->phi_max = pmax * PI / 180.0f;
+        this->theta_max = tmax * PI / 180.0f;
+    }
+
+    
+    void get_bounding_cube() {
+        float big_r = major_r + minor_r;
+        b_cube_vertices[0] = Eigen::Vector4f(big_r, big_r, -minor_r, 1.0f);
+        b_cube_vertices[1] = Eigen::Vector4f(-1*big_r, big_r, -minor_r, 1.0f);
+        b_cube_vertices[2] = Eigen::Vector4f(-1*big_r, -1*big_r, -minor_r, 1.0f);
+        b_cube_vertices[3] = Eigen::Vector4f(big_r, -1*big_r, -minor_r, 1.0f);
+
+        b_cube_vertices[4] = Eigen::Vector4f(big_r, big_r, minor_r, 1.0f);
+        b_cube_vertices[5] = Eigen::Vector4f(-1 * big_r, big_r, minor_r, 1.0f);
+        b_cube_vertices[6] = Eigen::Vector4f(-1 * big_r, -1 * big_r, minor_r, 1.0f);
+        b_cube_vertices[7] = Eigen::Vector4f(big_r, -1 * big_r, minor_r, 1.0f);
+    }
+    
+
+    virtual void build(int width, int height) {
+        get_bounding_cube();
+        dice_factor = get_dice_factor(width, height);
+        points.resize(dice_factor * dice_factor);
+        vertex_colors.resize(dice_factor * dice_factor);
+
+        int i = 0;
+        for (int u = 0; u < dice_factor; ++u) {
+            for (int v = 0; v < dice_factor; ++v) {
+                Eigen::Vector4f position;
+
+                float u_n = (float)u / ((float)dice_factor - 1);
+                float v_n = (float)v / ((float)dice_factor - 1);
+
+                float phi = phi_min + v_n * (phi_max - phi_min);
+                float theta = u_n * theta_max;
+                float r = minor_r * std::cos(phi);
+
+
+                position.x() = (major_r + r) * std::cos(theta);
+                position.y() = (major_r + r) * std::sin(theta);
+                position.z() = minor_r * std::sin(phi);
+                position.w() = 1.0f;
+
+                points[i] = position;
+                ++i;
+            }
+        }
+
+        for (int u = 0; u < dice_factor - 1; ++u)
+        {
+            int aStart = u * dice_factor;
+            int bStart = (u + 1) * dice_factor;
+            for (int v = 0; v < dice_factor - 1; ++v)
+            {
+                int const a = aStart + v;
+                int const a1 = aStart + (v + 1);
+                int const b = bStart + v;
+                int const b1 = bStart + (v + 1);
+                add_quad(a, a1, b1, b);
+            }
+        }
+
+        set_primitive_color();
+
+    }
+
+
+};
