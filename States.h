@@ -9,7 +9,9 @@ public:
 	float pixelaspectratio;
 	const char* filename;
 
-	ImageState();
+	ImageState() {
+		filename = nullptr;
+	}
 };
 
 class CameraState {
@@ -28,7 +30,10 @@ public:
 	Eigen::Matrix4f current_transformation;
 	int is_in_transform_block;
 
-	TransformationState();
+	TransformationState() {
+		is_in_transform_block = 0;
+		current_transformation = Eigen::Matrix4f::Identity();
+	}
 };
 
 class WorldState {
@@ -62,5 +67,10 @@ public:
 	Eigen::Matrix4f transformation;
 
 	//std::vector<Eigen::Vector4f> world_mesh;
-	RenderState();
+	RenderState() {
+		//projection_type = RI_ORTHOGRAPHIC;
+		zNear = 0.0;
+		zFar = 100.0;
+		transformation = Eigen::Matrix4f::Identity();
+	}
 };
