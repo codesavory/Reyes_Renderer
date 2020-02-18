@@ -1,13 +1,8 @@
 #pragma once
-#ifndef STB_IMAGE_IMPLEMENTATION
-#define STBI_MSC_SECURE_CRT
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#endif
 #include <Eigen/Eigen>
 
 
-inline float clamp(float v, float min=0.0f, float max=1.0f) {
+inline float clamp(float v, float min = 0.0f, float max = 1.0f) {
     return std::max(min, std::min(v, max));
 }
 
@@ -116,11 +111,7 @@ public:
     std::shared_ptr<unsigned char> data;
     int w, h, n;
 
-    Texture() {
-        unsigned char* raw_data = stbi_load("textures\\earth_2.jpg", &w, &h, &n, 0);
-        std::shared_ptr<unsigned char> data(raw_data);
-        this->data = data;
-    }
+    Texture();
 
     Color get_at(float u, float v) {
 
@@ -156,4 +147,11 @@ struct FragmentShaderPayload {
     Color c;
 
     std::shared_ptr<Texture> texture;
+};
+
+struct GeometricShaderPayload {
+    int dice_factor;
+    std::vector<Eigen::Vector4f> points;
+    std::vector<Eigen::Vector4f> normals;
+    std::vector<TriangleVerts> triangle_verts;
 };

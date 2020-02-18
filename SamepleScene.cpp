@@ -6,6 +6,7 @@
 //#include "Reyes_Impl.h"
 #include <fstream>
 #include <numeric>
+#include "Shaders.h";
 
 
 inline void parse_teapot_patches() {
