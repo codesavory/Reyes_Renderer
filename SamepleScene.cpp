@@ -4,7 +4,33 @@
 #include <Eigen/Eigen>
 #include <iostream>
 //#include "Reyes_Impl.h"
+#include <fstream>
+#include <numeric>
 
+
+inline void parse_teapot_patches() {
+	std::ifstream input("a.txt");
+	std::string line;
+
+	int num_patch;
+	input >> num_patch;
+
+	for (int i = 0; i < num_patch; ++i) {
+		std::vector<Eigen::Vector3f> cp;
+		cp.resize(16);
+
+		int p, q;
+		input >> p >> q;
+		
+		for (int j = 0; j < 16; ++j) {
+			float x, y, z;
+			input >> x >> y >> z;
+			cp[j] = Eigen::Vector3f(x, y, z);
+		}
+
+		Ri_Patch(cp);
+	}
+}
 
 void SampleScene1(void) {
 	int i;

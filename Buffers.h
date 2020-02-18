@@ -41,17 +41,17 @@ public:
 
     Color collapse(int x, int y) {
 
-        Eigen::Vector4f pix_color = Eigen::Vector4f::Zero();
+        Eigen::Vector3f pix_color = Eigen::Vector3f::Zero();
 
         for (int m = 0; m < xsamples; ++m) {
             for (int n = 0; n < ysamples; ++n) {
                 Color sc = this->operator()(x, y, m, n);
-                pix_color += Eigen::Vector4f(sc.r, sc.g, sc.b, sc.a);
+                pix_color += Eigen::Vector3f(sc.r(), sc.g(), sc.b());
             }
         }
 
         pix_color /= (xsamples * ysamples);
-        Color c(pix_color[0], pix_color[1], pix_color[2], pix_color[3]);
+        Color c(pix_color[0], pix_color[1], pix_color[2]);
         return c;
     }
 };

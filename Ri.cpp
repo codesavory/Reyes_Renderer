@@ -1,7 +1,9 @@
 #include "Ri.h"
+#include "Types.h"
 #include "Primitives.h"
 #include "States.h"
 #include "Renderer.h"
+#include "Shaders.h"
 #include <iostream>
 
 #define PI 3.141592653589793238462643383279502884197
@@ -94,10 +96,11 @@ void RiColor(RtColor color) {
 	float g = color[1];
 	float b = color[2];
 
-	r *= 255.0f;
+	/*r *= 255.0f;
 	g *= 255.0f;
-	b *= 255.0f;
-	Color c = Color(r, g, b, 1.0f);
+	b *= 255.0f;*/
+	Color c;
+	c.set(r, g, b);
 	render_state.current_color = c;
 }
 
@@ -112,14 +115,15 @@ void RiProjection(T projetion_type, Args... args) {
 }
 */
 
+
 void RiWorldBegin() {
 	// Set the transformation matrix in render state according to the defined projection
 	//auto perspective = render_state.projection_type;
-	
-
 }
 
+
 void RiWorldEnd() {
+
 }
 
 
@@ -127,15 +131,18 @@ void RiFrameEnd() {
 	render_frame(world_state, render_state, image_state);
 }
 
+
 void RiTransformBegin() {
 	transformation_state.current_transformation = Eigen::Matrix4f::Identity();
 	transformation_state.is_in_transform_block = 1;
 }
 
+
 void RiTransformEnd() {
 	transformation_state.current_transformation = Eigen::Matrix4f::Identity();
 	transformation_state.is_in_transform_block = 0;
 }
+
 
 void RiTranslate(RtFloat dx, RtFloat dy, RtFloat dz) {
 	// Use actual matrix here
@@ -154,45 +161,6 @@ void RiTranslate(RtFloat dx, RtFloat dy, RtFloat dz) {
 	}
 }
 
-void RiSphere(float radius, float zmin, float zmax, float tmax) {
-	auto model_to_world_matrix = transformation_state.current_transformation;
-	auto world_to_view_transformation = render_state.transformation;
-	//auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 1, 100);
-	auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
-
-	std::unique_ptr<Primitive> sphere_ptr = std::make_unique<Sphere>(radius, -1* radius, radius, 360.0f);
-	sphere_ptr -> mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
-	world_state.object_ptrs.push_back(std::move(sphere_ptr));
-	
-}
-
-void RiCylinder(float radius, float zmin, float zmax, float tmax) {
-	auto model_to_world_matrix = transformation_state.current_transformation;
-	auto world_to_view_transformation = render_state.transformation;
-	auto view_to_frame_transformation = get_perspective_projection_matrix(90.0f, 1.0, 1, 100);
-	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
-
-	std::unique_ptr<Primitive> c_ptr = std::make_unique<Cylinder>(radius, zmin, zmax, tmax);
-	c_ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
-	c_ptr->primitive_color = render_state.current_color;
-	world_state.object_ptrs.push_back(std::move(c_ptr));
-}
-
-
-
-void RiTorus(float majorRadius, float minorRadius, float phimin, float phimax, float tmax) {
-	auto model_to_world_matrix = transformation_state.current_transformation;
-	auto world_to_view_transformation = render_state.transformation;
-	auto view_to_frame_transformation = get_perspective_projection_matrix(90.0f, 1.0, 1, 100);
-	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
-
-	std::unique_ptr<Primitive> c_ptr = std::make_unique<Torus>(majorRadius, minorRadius, phimin, phimax, tmax);
-	c_ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
-	c_ptr->primitive_color = render_state.current_color;
-	world_state.object_ptrs.push_back(std::move(c_ptr));
-}
-
-
 
 void RiRotate(float rotation_angle, float dx, float dy, float dz) {
 
@@ -202,42 +170,17 @@ void RiRotate(float rotation_angle, float dx, float dy, float dz) {
 	float x = dx;
 	float y = dy;
 	float z = dz;
-	
-	model(0,0) = x * x * (1 - cos(angle)) + cos(angle);
-	model(1,0) = x * y * (1 - cos(angle)) + z * sin(angle);
-	model(2,0) = x * z * (1 - cos(angle)) - y * sin(angle);
-	model(0,1) = y * x * (1 - cos(angle)) - z * sin(angle);
-	model(1,1) = y * y * (1 - cos(angle)) + cos(angle);
-	model(2,1) = y * z * (1 - cos(angle)) + x * sin(angle);
-	model(0,2) = z * x * (1 - cos(angle)) + y * sin(angle);
-	model(1,2) = z * y * (1 - cos(angle)) - x * sin(angle);
-	model(2,2) = z * z * (1 - cos(angle)) + cos(angle);
-	model(3,3) = 1.0f;
 
-	/*
-	if (dz == 1.0f)
-	{
-		model << cos(rotation_angle), -sin(rotation_angle), 0, 0,
-			sin(rotation_angle), cos(rotation_angle), 0, 0,
-			0, 0, 1, 0,
-			0, 0, 0, 1; //rotation about z-axis by rotation_angle
-	}
-	else if (dx == 1.0f)
-	{
-		model << 1, 0, 0, 0,
-			0, cos(rotation_angle), -sin(rotation_angle), 0,
-			0, sin(rotation_angle), cos(rotation_angle), 0,
-			0, 0, 0, 1;
-	}
-	else if (dy == 1.0f)
-	{
-		model << cos(rotation_angle), 0, sin(rotation_angle), 0,
-			0, 1, 0, 0,
-			-sin(rotation_angle), 0, cos(rotation_angle), 0,
-			0, 0, 0, 1;
-	}
-	*/
-
+	model(0, 0) = x * x * (1 - cos(angle)) + cos(angle);
+	model(1, 0) = x * y * (1 - cos(angle)) + z * sin(angle);
+	model(2, 0) = x * z * (1 - cos(angle)) - y * sin(angle);
+	model(0, 1) = y * x * (1 - cos(angle)) - z * sin(angle);
+	model(1, 1) = y * y * (1 - cos(angle)) + cos(angle);
+	model(2, 1) = y * z * (1 - cos(angle)) + x * sin(angle);
+	model(0, 2) = z * x * (1 - cos(angle)) + y * sin(angle);
+	model(1, 2) = z * y * (1 - cos(angle)) - x * sin(angle);
+	model(2, 2) = z * z * (1 - cos(angle)) + cos(angle);
+	model(3, 3) = 1.0f;
 
 	if (transformation_state.is_in_transform_block) {
 		transformation_state.current_transformation = model * transformation_state.current_transformation;
@@ -245,6 +188,76 @@ void RiRotate(float rotation_angle, float dx, float dy, float dz) {
 	else {
 		render_state.transformation = model * render_state.transformation;
 	}
+}
+
+
+
+void RiSphere(float radius, float zmin, float zmax, float tmax) {
+	auto model_to_world_matrix = transformation_state.current_transformation;
+	auto world_to_view_transformation = render_state.transformation;
+	//auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 1, 100);
+	auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
+
+	std::unique_ptr<Primitive> ptr = std::make_unique<Sphere>(radius, -1* radius, radius, 360.0f);
+	ptr->primitive_color = render_state.current_color;
+	ptr->m = model_to_world_matrix;
+	ptr->v = world_to_view_transformation;
+	ptr->p = view_to_frame_transformation;
+	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+	//ptr->surface_shade = checkboard;
+	world_state.object_ptrs.push_back(std::move(ptr));
+	
+}
+
+
+void RiCylinder(float radius, float zmin, float zmax, float tmax) {
+	auto model_to_world_matrix = transformation_state.current_transformation;
+	auto world_to_view_transformation = render_state.transformation;
+	auto view_to_frame_transformation = get_perspective_projection_matrix(90.0f, 1.0, 1, 100);
+	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
+
+	std::unique_ptr<Primitive> ptr = std::make_unique<Cylinder>(radius, zmin, zmax, tmax);
+	ptr->primitive_color = render_state.current_color;
+	ptr->m = model_to_world_matrix;
+	ptr->v = world_to_view_transformation;
+	ptr->p = view_to_frame_transformation;
+	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+	//ptr->surface_shade = checkboard;
+	world_state.object_ptrs.push_back(std::move(ptr));
+}
+
+
+void RiTorus(float majorRadius, float minorRadius, float phimin, float phimax, float tmax) {
+	auto model_to_world_matrix = transformation_state.current_transformation;
+	auto world_to_view_transformation = render_state.transformation;
+	auto view_to_frame_transformation = get_perspective_projection_matrix(90.0f, 1.0, 1, 100);
+	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
+
+	std::unique_ptr<Primitive> ptr = std::make_unique<Torus>(majorRadius, minorRadius, phimin, phimax, tmax);
+	ptr->primitive_color = render_state.current_color;
+	ptr->m = model_to_world_matrix;
+	ptr->v = world_to_view_transformation;
+	ptr->p = view_to_frame_transformation;
+	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+	//ptr->surface_shade = checkboard;
+	world_state.object_ptrs.push_back(std::move(ptr));
+}
+
+
+void Ri_Patch(std::vector<Eigen::Vector3f> cp) {
+	auto model_to_world_matrix = transformation_state.current_transformation;
+	auto world_to_view_transformation = render_state.transformation;
+	//auto view_to_frame_transformation = get_perspective_projection_matrix(90.0f, 1.0, 1, 100);
+	auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 0.01, 100);
+
+	std::unique_ptr<Primitive> ptr = std::make_unique<Patch>(cp, 5.0f);
+	ptr->primitive_color = render_state.current_color;
+	ptr->m = model_to_world_matrix;
+	ptr->v = world_to_view_transformation;
+	ptr->p = view_to_frame_transformation;
+	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+	//ptr->surface_shade = checkboard;
+	world_state.object_ptrs.push_back(std::move(ptr));
 }
 
 

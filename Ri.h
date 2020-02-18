@@ -4,6 +4,7 @@
 * (for ANSI Standard C)
 */
 /* Definitions of Abstract Types used in RI */
+#include "Eigen/Eigen"
 
 typedef short RtBoolean;
 typedef int RtInt;
@@ -314,6 +315,7 @@ RiReadArchiveV(RtToken name, RtArchiveCallback callback,
 	RtInt n, RtToken tokens[], RtPointer parms[]);
 extern RtVoid
 RiErrorHandler(RtErrorHandler handler);
+void Ri_Patch(std::vector<Eigen::Vector3f> cp);
 /*
 Error Codes
 1 - 10 System and File Errors

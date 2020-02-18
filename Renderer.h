@@ -2,27 +2,48 @@
 #define STBI_MSC_SECURE_CRT
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
+#include "Types.h"
 #include "Primitives.h"
 #include "States.h"
 #include <Eigen/Eigen>
 #include <iostream>
 #include <numeric>
 #include "Buffers.h"
+#include <fstream>
+#include "Shaders.h"
+//#define _USE_MATH_DEFINES
+//#include <OpenMesh/Core/IO/MeshIO.hh>
+//#include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
+//typedef OpenMesh::TriMesh_ArrayKernelT<> Mesh;
+
 
 inline
-float edgeFunction(const Eigen::Vector4f& a, const Eigen::Vector4f& b, const Eigen::Vector4f& c)
+float edge_function(const Eigen::Vector4f& a, const Eigen::Vector4f& b, const Eigen::Vector4f& c)
 {
     return ((c.x() - a.x()) * (b.y() - a.y()) - (c.y() - a.y()) * (b.x() - a.x()));
 }
 
+inline UVTuple interpolate_uv(float w0, float w1, float w2, UVTuple uv[3]) {
+    auto u = (w0 * uv[0].u + w1 * uv[1].u + w2 * uv[2].u);
+    auto v = (w0 * uv[0].v + w1 * uv[1].v + w2 * uv[2].v);
 
+    UVTuple r;
+    r.u = u;
+    r.v = v;
+    return r;
+}
 
-
+inline Eigen::Vector4f interpolate_vector(float w0, float w1, float w2, Eigen::Vector4f normals[3]) {
+    auto interpolated = w0 * normals[0] + w1 * normals[1] + w2 * normals[2];
+    return interpolated;
+}
 
 inline
 void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& zb,
-    Triangle t) {
+    Triangle t, void (*surface_shader)(FragmentShaderPayload& p), 
+    std::shared_ptr<Texture> texture) {
 
+    // default background color
     Eigen::Vector3f pixel_color(0, 0, 0);
     for (float m = 0; m < xsamples; ++m) {
         for (float n = 0; n < ysamples; ++n) {
@@ -32,7 +53,7 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
             float mMax = (float)(m + 1) / xsamples;
             float nMax = (float)(n + 1) / ysamples;
 
-            // using random sampling values makes stuff noisy
+            //using random sampling values makes stuff noisy
             //float x_delta = ((float)rand() / RAND_MAX) * (mMax - mMin) + mMin;
             //float y_delta = ((float)rand() / RAND_MAX) * (nMax - nMin) + nMin;
 
@@ -44,10 +65,10 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
             auto v1 = t.screen_coordinates[1];
             auto v2 = t.screen_coordinates[2];
 
-            float area = edgeFunction(v0, v1, v2);
-            float w0 = edgeFunction(v1, v2, sample);
-            float w1 = edgeFunction(v2, v0, sample);
-            float w2 = edgeFunction(v0, v1, sample);
+            float area = edge_function(v0, v1, v2);
+            float w0 = edge_function(v1, v2, sample);
+            float w1 = edge_function(v2, v0, sample);
+            float w2 = edge_function(v0, v1, sample);
 
             bool is_inside = (w0 >= 0 && w1 >= 0 && w2 >= 0);
 
@@ -56,23 +77,44 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
                 w0 /= area;
                 w1 /= area;
                 w2 /= area;
+
+                /*--------------------------*/
+                float w_reciprocal = 1.0 / (w0 / v0.w() + w1 / v1.w() + w2 / v2.w());
+                float z_interpolated = w0 * v0.z() / v0.w() + w1 * v1.z() / v1.w() + w2 * v2.z() / v2.w();
+                z_interpolated *= w_reciprocal;
+                float z = z_interpolated;
+
                 // linearly interpolate sample depth
-                float oneOverZ = v0.z() * w0 + v1.z() * w1 + v2.z() * w2;
-                float z = 1 / oneOverZ;
+                //float oneOverZ = v0.z() * w0 + v1.z() * w1 + v2.z() * w2;
+                //float z = 1 / oneOverZ;
 
                 if (z < zb(x, y, m, n).front()) {
                     zb(x, y, m, n).push_front(z);
 
                     auto c = t.colors;
 
-                    float r = w0 * c[0].r + w1 * c[1].r + w2 * c[2].r;
-                    float g = w0 * c[0].g + w1 * c[1].g + w2 * c[2].g;
-                    float b = w0 * c[0].b + w1 * c[1].b + w2 * c[2].b;
-                    Color z(r, g, b, 1.0);
-                    fb(x, y, m, n) = z;
+                    Color c0 = w0 * c[0];
+                    Color c1 = w1 * c[1];
+                    Color c2 = w2 * c[2];
+                    Color c_interpolated = c0 + c1 + c2;
 
-                    
+                    UVTuple uv = interpolate_uv(w0, w1, w2, t.uv_tups);
+                    auto interpolated_xyz = interpolate_vector(w0, w1, w2, t.world_coordinates);
+                    auto interpolated_normal = interpolate_vector(w0, w1, w2, t.normals);
 
+                    FragmentShaderPayload p;
+                    p.u = uv.u;
+                    p.v = uv.v;
+                    p.texture = texture;
+                    p.pos = interpolated_xyz;
+                    p.normal = interpolated_normal;
+                    p.c = c_interpolated;
+
+
+                    //surface_shader(p);
+                    light(p);
+                    c_interpolated = p.c;
+                    fb(x, y, m, n) = c_interpolated;
 
                 }
             }
@@ -83,8 +125,8 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
 }
 
 
-void pimage(FrameBuffer frame_buffer) {
-    const char* filename = "D:\\stbjpg3.jpg";
+void pimage(FrameBuffer frame_buffer, const char* filename) {
+    const char* f = "D:\\stbjpg3.jpg";
     const int CHANNEL_NUM = 3;
 
     int width = frame_buffer.w;
@@ -100,35 +142,17 @@ void pimage(FrameBuffer frame_buffer) {
     {
         for (int y = 0; y < height; ++y)
         {
-            
             index = (y * width * 3) + x * 3;
             Color pix_color = frame_buffer.collapse(x, y);
-            out_buffer[index++] = pix_color.r;
-            out_buffer[index++] = pix_color.g;
-            out_buffer[index++] = pix_color.b;
-            
-            
-            /*for (int m = 0; m < 2; ++m) {
-                for (int n = 0; n < 2; ++n) {
-
-                    index = (y * width * 3) + x * 3;
-                    out_buffer[index++] = frame_buffer(x, y,m,n).r;
-                    out_buffer[index++] = frame_buffer(x, y, m, n).g;
-                    out_buffer[index++] = frame_buffer(x, y, m, n).b;
-
-                }
-            }*/
-            
-            
+            out_buffer[index++] = pix_color.ir();
+            out_buffer[index++] = pix_color.ig();
+            out_buffer[index++] = pix_color.ib();
         }
     }
 
-    stbi_write_jpg(filename, width, height, 3, out_buffer, 100);
+    stbi_write_jpg(f, width, height, 3, out_buffer, 100);
     delete[] out_buffer;
-    //return 0;
 }
-
-
 
 void render_frame(WorldState& world_state, RenderState& render_state, ImageState& image_state) {
 	const int xsamples = render_state.xsamples;
@@ -136,40 +160,42 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
 	const int width = image_state.x_resolution;
 	const int height = image_state.y_resolution;
 
-	// responsible for storing color
+    std::shared_ptr<Texture> texture = std::make_shared<Texture>();
+    void (*surface_shader)(FragmentShaderPayload& p) = earth;
+
 	FrameBuffer frame_buffer(width, height, xsamples, ysamples);
     ZBuffer z_buffer(width, height, xsamples, ysamples);
 
     std::vector<std::unique_ptr<Primitive>>& world_obj_ptrs = world_state.object_ptrs;
 
-    
 	for (int i = 0; i < world_obj_ptrs.size(); ++i) {
+
         std::unique_ptr<Primitive> objPtr = std::move(world_obj_ptrs[i]);
         objPtr->build(width, height);
 
-
-        //Primitive& obj = *objPtr;
         auto& points = objPtr->points;
-
         for (int j = 0; j < points.size(); ++j) {
             auto p = objPtr->points[j];
-            p = objPtr -> mvp * p;
+
+            Eigen::Vector4f sp = objPtr -> mvp * p;
             // For some reason x axis and y axis are flipped, so multiplying by -1
-            p.x() = p.x() / p.w() * -1;
-            p.y() = p.y() / p.w() * -1;
-            p.z() = p.z() / p.w();
+            sp.x() = sp.x() / sp.w() * -1;
+            sp.y() = sp.y() / sp.w() * -1;
+            sp.z() = sp.z() / sp.w();
+
+            Eigen::Vector4f wp = objPtr -> m * p;
+            wp.x() = wp.x() * -1;
+            wp.y() = wp.y() * -1;
 
 			Eigen::Vector4f pixel_coordinate_space;
 
-			float screen_x = (p.x() + 1.0f) * 0.5f * width;
-			float screen_y = (1.0 - (p.y() + 1.0f) * 0.5f) * height;
+			float screen_x = (sp.x() + 1.0f) * 0.5f * width;
+			float screen_y = (1.0 - (sp.y() + 1.0f) * 0.5f) * height;
+            sp.x() = screen_x;
+            sp.y() = screen_y;
 
-            p.x() = screen_x;
-            p.y() = screen_y;
-
-			points[j] = p;
-
-            //frame_buffer(p.x(), p.y(), 0, 0) = Color(255.0f, 255.0f, 255.0f, 1.0f);
+			points[j] = sp;
+            objPtr->world_points[j] = wp;
 		}
         
 
@@ -209,22 +235,35 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
             //clamp to top edge
             bb_top_y = std::min(bb_top_y, (float)height);
 
-            
 
             for (int x = bb_left_x; x < bb_right_x; x++)
             {
                 for (int y = bb_bottom_y; y < bb_top_y; y++)
                 {
+
+
                     Triangle tri;
-                    tri.screen_coordinates[0] = v[0];
-                    tri.screen_coordinates[1] = v[1];
-                    tri.screen_coordinates[2] = v[2];
+                    for (int k = 0; k < 3; ++k) {
+                        tri.screen_coordinates[k] = v[k];
+                        tri.world_coordinates[k] = objPtr->world_points[triangle_vert_ids[k]];
+                        tri.colors[k] = objPtr->vertex_colors[triangle_vert_ids[k]];
+                        tri.uv_tups[k] = objPtr->get_uv(triangle_vert_ids[k]);
+                        tri.normals[k] = objPtr->normals[triangle_vert_ids[k]];
+                    }
 
-                    tri.colors[0] = objPtr->vertex_colors[triangle_vert_ids[0]];
-                    tri.colors[1] = objPtr->vertex_colors[triangle_vert_ids[1]];
-                    tri.colors[2] = objPtr->vertex_colors[triangle_vert_ids[2]];
+                    //tri.screen_coordinates[0] = v[0];
+                    //tri.screen_coordinates[1] = v[1];
+                    //tri.screen_coordinates[2] = v[2];
 
-                    sample(x, y, xsamples, ysamples, frame_buffer, z_buffer, tri);   
+                    //tri.colors[0] = objPtr->vertex_colors[triangle_vert_ids[0]];
+                    //tri.colors[1] = objPtr->vertex_colors[triangle_vert_ids[1]];
+                    //tri.colors[2] = objPtr->vertex_colors[triangle_vert_ids[2]];
+
+                    sample(
+                        x, y, xsamples, ysamples, 
+                        frame_buffer, z_buffer, 
+                        tri, surface_shader, texture
+                    );   
                 }
             }
 
@@ -232,8 +271,10 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
 
         }
         
+        
 	}
 
-    pimage(frame_buffer);
+
+    pimage(frame_buffer, image_state.filename);
     
 }

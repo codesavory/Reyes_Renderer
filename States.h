@@ -66,7 +66,9 @@ public:
 	// This matrix represent world-to-camera and camera-to-screen projection combined
 	Eigen::Matrix4f transformation;
 
-	//std::vector<Eigen::Vector4f> world_mesh;
+	void (*surface_shade)(FragmentShaderPayload p);
+	std::shared_ptr<Texture> texture;
+
 	RenderState() {
 		//projection_type = RI_ORTHOGRAPHIC;
 		zNear = 0.0;
