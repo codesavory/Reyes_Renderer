@@ -531,11 +531,5 @@ public:
         normal.z() = n.z();
         normal.w() = 0.0f;
 
-        
-        /*normal.x() = p.x();
-        normal.y() = p.y();
-        normal.z() = p.z();
-        normal.w() = 0.0f;
-        normal.normalize();*/
     }
 };

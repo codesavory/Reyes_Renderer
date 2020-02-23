@@ -65,6 +65,10 @@ void RiEnd() {
 
 }
 
+void RiDisplay(char* fname, RtToken type, RtToken mode, ...) {
+	image_state.filename = std::string(fname);
+}
+
 void RiFormat(int x_resolution, int y_resolution, float pixelaspectratio) {
 	image_state.x_resolution = x_resolution;
 	image_state.y_resolution = y_resolution;
@@ -87,6 +91,7 @@ void RiShutter(float shutter_min, float shutter_max) {
 void RiFrameBegin(int i) {
 	render_state.f_no = i;
 	//render_state.projection_type = RI_ORTHOGRAPHIC;
+	//image_state.filename += std::to_string(i);
 }
 
 void RiColor(RtColor color) {

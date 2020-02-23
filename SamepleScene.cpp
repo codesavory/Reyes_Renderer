@@ -73,7 +73,7 @@ void SampleScene1(void) {
 	RiWorldBegin();
 	RiTransformBegin();
 
-	RiTranslate(0, 0, -10);
+	RiDisplay("D:\\stbjpg3.jpg", "file", "rgb", RI_NULL);
 	RiColor(red);
 	RiSphere(15, 0, 0, 0);
 	RiTransformEnd();
