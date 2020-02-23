@@ -185,11 +185,10 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
             sp.z() = sp.z() / sp.w();
 
             Eigen::Vector4f wp = objPtr->m * p;
-            wp.x() = wp.x() * -1;
-            wp.y() = wp.y() * -1;
+            //wp.x() = wp.x() * 1;
+            //wp.y() = wp.y() * 1;
 
             Eigen::Vector4f pixel_coordinate_space;
-
             float screen_x = (sp.x() + 1.0f) * 0.5f * width;
             float screen_y = (1.0 - (sp.y() + 1.0f) * 0.5f) * height;
             sp.x() = screen_x;
@@ -211,7 +210,7 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
                 points[triangle_vert_ids[0]],
                 points[triangle_vert_ids[1]],
                 points[triangle_vert_ids[2]]
-                });
+            });
 
             float bb_left_x = width, bb_right_x = 0, bb_top_y = 0, bb_bottom_y = height;
             for (int vertex_no = 0; vertex_no < 3; vertex_no++)
@@ -243,7 +242,6 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
                 for (int y = bb_bottom_y; y < bb_top_y; y++)
                 {
 
-
                     Triangle tri;
                     for (int k = 0; k < 3; ++k) {
                         tri.screen_coordinates[k] = v[k];
@@ -252,14 +250,6 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
                         tri.uv_tups[k] = objPtr->get_uv(triangle_vert_ids[k]);
                         tri.normals[k] = objPtr->normals[triangle_vert_ids[k]];
                     }
-
-                    //tri.screen_coordinates[0] = v[0];
-                    //tri.screen_coordinates[1] = v[1];
-                    //tri.screen_coordinates[2] = v[2];
-
-                    //tri.colors[0] = objPtr->vertex_colors[triangle_vert_ids[0]];
-                    //tri.colors[1] = objPtr->vertex_colors[triangle_vert_ids[1]];
-                    //tri.colors[2] = objPtr->vertex_colors[triangle_vert_ids[2]];
 
                     sample(
                         x, y, xsamples, ysamples,
