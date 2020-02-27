@@ -196,8 +196,14 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
             sp.y() = screen_y;
 
             points[j] = sp;
-            objPtr->normals[j] = wp.normalized();
+            //objPtr->normals[j] = wp.normalized();
             objPtr->world_points[j] = wp;
+
+            Eigen::Vector4f n = objPtr->normals[j];
+            auto m_n = objPtr->m.inverse().transpose();
+            n = m_n * n;
+            //n.normalize();
+            objPtr->normals[j] = n;
         }
 
 
