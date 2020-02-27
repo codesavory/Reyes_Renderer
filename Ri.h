@@ -4,6 +4,8 @@
 * (for ANSI Standard C)
 */
 /* Definitions of Abstract Types used in RI */
+#include <Eigen/Eigen>
+#include "Types.h"
 
 typedef short RtBoolean;
 typedef int RtInt;
@@ -222,7 +224,7 @@ RiSphereV(RtFloat radius, RtFloat zmin, RtFloat zmax, RtFloat tmax,
 	RiCone(RtFloat height, RtFloat radius, RtFloat tmax, ...),
 	RiConeV(RtFloat height, RtFloat radius, RtFloat tmax,
 		RtInt n, RtToken tokens[], RtPointer parms[]),
-	RiCylinder(RtFloat radius, RtFloat zmin, RtFloat zmax, RtFloat tmax, ...),
+	RiCylinder(RtFloat radius, RtFloat zmin, RtFloat zmax, RtFloat tmax),
 	RiCylinderV(RtFloat radius, RtFloat zmin, RtFloat zmax, RtFloat tmax,
 		RtInt n, RtToken tokens[], RtPointer parms[]),
 	RiHyperboloid(RtPoint point1, RtPoint point2, RtFloat tmax, ...),
@@ -314,6 +316,11 @@ RiReadArchiveV(RtToken name, RtArchiveCallback callback,
 	RtInt n, RtToken tokens[], RtPointer parms[]);
 extern RtVoid
 RiErrorHandler(RtErrorHandler handler);
+void Ri_Patch(std::vector<Eigen::Vector3f> cp);
+void Ri_GeometricShader(void (*geometric_shade)(GeometricShaderPayload& p));
+void Ri_Texture(void (*surface_shader)(FragmentShaderPayload& p));
+template<typename T, typename... Args>
+void _generate(Args...args);
 /*
 Error Codes
 1 - 10 System and File Errors

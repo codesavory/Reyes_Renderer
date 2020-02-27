@@ -4,7 +4,34 @@
 #include <Eigen/Eigen>
 #include <iostream>
 //#include "Reyes_Impl.h"
+#include <fstream>
+#include <numeric>
+#include "Shaders.h";
 
+
+inline void parse_teapot_patches() {
+	std::ifstream input("a.txt");
+	std::string line;
+
+	int num_patch;
+	input >> num_patch;
+
+	for (int i = 0; i < num_patch; ++i) {
+		std::vector<Eigen::Vector3f> cp;
+		cp.resize(16);
+
+		int p, q;
+		input >> p >> q;
+		
+		for (int j = 0; j < 16; ++j) {
+			float x, y, z;
+			input >> x >> y >> z;
+			cp[j] = Eigen::Vector3f(x, y, z);
+		}
+
+		Ri_Patch(cp);
+	}
+}
 
 void SampleScene1(void) {
 	int i;
@@ -12,7 +39,7 @@ void SampleScene1(void) {
 	float slopex, slopey, slopez;
 	char name[50];
 
-	RtColor red = { 0.5,0,0 };
+	RtColor red = { 1,0,0 };
 	RtColor green = { 0,1,0 };
 	RtColor blue = { 0,0,1 };
 	RtColor white = { 1,1,1 };
@@ -35,7 +62,7 @@ void SampleScene1(void) {
 
 	RiBegin(RI_NULL);
 
-	RiFormat(50, 50, 1);
+	RiFormat(500, 500, 1);
 	RiPixelSamples(2, 2);
 	RiShutter(0, 1);
 
@@ -46,13 +73,15 @@ void SampleScene1(void) {
 	RiWorldBegin();
 	RiTransformBegin();
 
-	RiTranslate(0, 0, 0);
+	RiDisplay("D:\\stbjpg3.jpg", "file", "rgb", RI_NULL);
 	RiColor(red);
-	RiSphere(20, 0, 0, 0);
+	RiSphere(15, 0, 0, 0);
+	RiTransformEnd();
 
-	//RiTranslate(0, 0, -30);
-	//RiColor(blue);
-	//RiSphere(10, 0, 0, 0);
+	RiTransformBegin();
+	RiTranslate(10, 0, 10);
+	RiColor(blue);
+	RiSphere(5, 0, 0, 0);
 	
 	
 	//RiTorus(40, 20, 0, 0, 0);

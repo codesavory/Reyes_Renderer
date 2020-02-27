@@ -5,7 +5,7 @@
 #include "Shaders.h"
 
 #define PI 3.141592653589793238462643383279502884197
-#define MICROPOLYGONS_PER_PIXEL 1
+#define MICROPOLYGONS_PER_PIXEL 4
 
 
 class Primitive {
@@ -25,7 +25,6 @@ public:
     std::vector<TriangleVerts> triangle_verts;
 
     void (*geometric_shader)(GeometricShaderPayload& p) = nullptr;
-    void (*surface_shader)(FragmentShaderPayload& p) = nullptr;
 
     void setup_vectors(int l) {
         world_points.resize(l);
@@ -75,14 +74,14 @@ public:
 
 
     virtual void get_bounding_cube() = 0;
-    virtual void get_3D_coordinates(float u_n, float v_n, Eigen::Vector4f& pos, Eigen::Vector4f& norm) = 0;
+    virtual Eigen::Vector4f get_3D_coordinates(float u_n, float v_n) = 0;
 
 
     int get_dice_factor(int width, int height) {
 
         float bb_left_x = std::numeric_limits<float>::infinity();
         float bb_right_x = -1 * std::numeric_limits<float>::infinity();
-        float bb_top_y = -1 * std::numeric_limits<float>::infinity(); 
+        float bb_top_y = -1 * std::numeric_limits<float>::infinity();
         float bb_bottom_y = std::numeric_limits<float>::infinity();
 
         for (int i = 0; i < 8; ++i) {
@@ -122,19 +121,15 @@ public:
         int i = 0;
         for (int u = 0; u < grid_width; ++u) {
             for (int v = 0; v < grid_height; ++v) {
-                
+
                 float u_n = (float)u / ((float)grid_width - 1);
                 float v_n = (float)v / ((float)grid_height - 1);
 
-                Eigen::Vector4f position;
-                Eigen::Vector4f normal;
-
-                get_3D_coordinates(u_n, v_n, position, normal);
-                //normal = position.normalized();
-                /*position.w() = 0.0f;
-                 = position.normalized();
+                Eigen::Vector4f position = get_3D_coordinates(u_n, v_n);
+                position.w() = 0.0f;
+                Eigen::Vector4f normal = position.normalized();
                 normal.w() = 1.0f;
-                position.w() = 1.0f;*/
+                position.w() = 1.0f;
 
                 points[i] = position;
                 normals[i] = normal;
@@ -169,6 +164,7 @@ public:
         generate_mesh_points(dice_factor, dice_factor);
         generate_polygons();
         set_primitive_color();
+        sh();
         //texture_map();
         //shade();
 
@@ -184,9 +180,6 @@ public:
     }
 
     void sh() {
-        if (geometric_shader == nullptr)
-            return;
-
         GeometricShaderPayload p;
         p.dice_factor = dice_factor;
         p.normals = normals;
@@ -199,8 +192,8 @@ public:
         points = p.points;
         triangle_verts = p.triangle_verts;
     }
-    
-    
+
+
 };
 
 
@@ -233,7 +226,8 @@ public:
         b_cube_vertices[7] = Eigen::Vector4f(-1 * radius, radius, -1 * radius, 1.0f);
     }
 
-    virtual void get_3D_coordinates(float u_n, float v_n, Eigen::Vector4f& position, Eigen::Vector4f& normal) {
+    virtual Eigen::Vector4f get_3D_coordinates(float u_n, float v_n) {
+        Eigen::Vector4f position;
 
         float phi = phimin + v_n * (phimax - phimin);
         float theta = u_n * thetamax;
@@ -241,10 +235,9 @@ public:
         position.x() = radius * std::cos(theta) * std::cos(phi);
         position.y() = radius * std::sin(theta) * std::cos(phi);
         position.z() = radius * std::sin(phi);
-
-        position.w() = 0.0f;
-        normal = position.normalized();
         position.w() = 1.0f;
+
+        return position;
     }
 };
 
@@ -264,9 +257,9 @@ public:
 
     virtual void get_bounding_cube() {
         b_cube_vertices[0] = Eigen::Vector4f(radius, radius, zmin, 1.0f);
-        b_cube_vertices[1] = Eigen::Vector4f(-1*radius, radius, zmin, 1.0f);
-        b_cube_vertices[2] = Eigen::Vector4f(-1 * radius, -1*radius, zmin, 1.0f);
-        b_cube_vertices[3] = Eigen::Vector4f(radius, -1*radius, zmin, 1.0f);
+        b_cube_vertices[1] = Eigen::Vector4f(-1 * radius, radius, zmin, 1.0f);
+        b_cube_vertices[2] = Eigen::Vector4f(-1 * radius, -1 * radius, zmin, 1.0f);
+        b_cube_vertices[3] = Eigen::Vector4f(radius, -1 * radius, zmin, 1.0f);
 
         b_cube_vertices[4] = Eigen::Vector4f(radius, radius, zmax, 1.0f);
         b_cube_vertices[5] = Eigen::Vector4f(-1 * radius, radius, zmax, 1.0f);
@@ -274,19 +267,15 @@ public:
         b_cube_vertices[7] = Eigen::Vector4f(radius, -1 * radius, zmax, 1.0f);
     }
 
-    virtual void get_3D_coordinates(float u_n, float v_n, Eigen::Vector4f& position, Eigen::Vector4f& normal) {
-        
+    virtual Eigen::Vector4f get_3D_coordinates(float u_n, float v_n) {
+        Eigen::Vector4f position;
         float theta = u_n * thetamax;
         position.x() = radius * cos(theta);
         position.y() = radius * sin(theta);
         position.z() = zmin + v_n * (zmax - zmin);
         position.w() = 1.0f;
 
-        normal.x() = position.x();
-        normal.y() = position.y();
-        normal.z() = 0.0f;
-        normal.w() = 0.0f;
-        normal.normalize();
+        return position;
     }
 
 };
@@ -308,13 +297,13 @@ public:
         this->theta_max = tmax * PI / 180.0f;
     }
 
-    
+
     virtual void get_bounding_cube() {
         float big_r = major_r + minor_r;
         b_cube_vertices[0] = Eigen::Vector4f(big_r, big_r, -minor_r, 1.0f);
-        b_cube_vertices[1] = Eigen::Vector4f(-1*big_r, big_r, -minor_r, 1.0f);
-        b_cube_vertices[2] = Eigen::Vector4f(-1*big_r, -1*big_r, -minor_r, 1.0f);
-        b_cube_vertices[3] = Eigen::Vector4f(big_r, -1*big_r, -minor_r, 1.0f);
+        b_cube_vertices[1] = Eigen::Vector4f(-1 * big_r, big_r, -minor_r, 1.0f);
+        b_cube_vertices[2] = Eigen::Vector4f(-1 * big_r, -1 * big_r, -minor_r, 1.0f);
+        b_cube_vertices[3] = Eigen::Vector4f(big_r, -1 * big_r, -minor_r, 1.0f);
 
         b_cube_vertices[4] = Eigen::Vector4f(big_r, big_r, minor_r, 1.0f);
         b_cube_vertices[5] = Eigen::Vector4f(-1 * big_r, big_r, minor_r, 1.0f);
@@ -322,8 +311,9 @@ public:
         b_cube_vertices[7] = Eigen::Vector4f(big_r, -1 * big_r, minor_r, 1.0f);
     }
 
-    
-    virtual void get_3D_coordinates(float u_n, float v_n, Eigen::Vector4f& position, Eigen::Vector4f& normal) {
+
+    virtual Eigen::Vector4f get_3D_coordinates(float u_n, float v_n) {
+        Eigen::Vector4f position;
 
         float phi = phi_min + v_n * (phi_max - phi_min);
         float theta = u_n * theta_max;
@@ -334,56 +324,10 @@ public:
         position.z() = minor_r * std::sin(phi);
         position.w() = 1.0f;
 
-        Eigen::Vector4f t(major_r * std::cos(theta), major_r * std::sin(theta), 0.0f, 0.0f);
-        normal = (position - t).normalized();
+        return position;
 
     }
 
-};
-
-
-class Cone : public Primitive {
-public:
-    float height, radius;
-    float thetamax;
-
-    Cone(float height, float radius, float tmax) {
-        this->radius = radius;
-        this->height = height;
-        this->thetamax = tmax * PI / 180.0f;
-    }
-
-    virtual void get_bounding_cube() {
-        b_cube_vertices[0] = Eigen::Vector4f(radius, radius, 0.0f, 1.0f);
-        b_cube_vertices[1] = Eigen::Vector4f(-1 * radius, radius, 0.0f, 1.0f);
-        b_cube_vertices[2] = Eigen::Vector4f(-1 * radius, -1 * radius, 0.0f, 1.0f);
-        b_cube_vertices[3] = Eigen::Vector4f(radius, -1 * radius, 0.0f, 1.0f);
-
-        b_cube_vertices[4] = Eigen::Vector4f(radius, radius, height, 1.0f);
-        b_cube_vertices[5] = Eigen::Vector4f(-1 * radius, radius, height, 1.0f);
-        b_cube_vertices[6] = Eigen::Vector4f(-1 * radius, -1 * radius, height, 1.0f);
-        b_cube_vertices[7] = Eigen::Vector4f(radius, -1 * radius, height, 1.0f);
-    }
-
-    virtual void get_3D_coordinates(float u_n, float v_n, Eigen::Vector4f& position, Eigen::Vector4f& normal) {
-
-        float theta = u_n * thetamax;
-
-        position.x() = radius * (1 - v_n) * std::cos(theta);
-        position.y() = radius * (1 - v_n) * std::sin(theta);
-        position.z() = v_n * height;
-        position.w() = 1.0f;
-
-        //vector from center to position
-        Eigen::Vector4f V(position.x(), position.y(), 0.0f, 1.0f);
-        V.normalize();
-        normal.x() = V.x() * height / radius;
-        normal.y() = V.y() * height / radius;
-        normal.z() = radius / height;
-        normal.w() = 0.0f;
-        normal.normalize();
-
-    }
 };
 
 
@@ -391,11 +335,42 @@ class Patch : public Primitive {
 public:
     std::vector<Eigen::Vector3f> control_points;
 
-    
+
     Patch(std::vector<Eigen::Vector3f> cp, float scale) {
         this->control_points = cp;
         for (int i = 0; i < control_points.size(); ++i)
             control_points[i] *= scale;
+    }
+
+    Eigen::Vector3f eval_curve(Eigen::Vector3f cp[4], float t) {
+
+        Eigen::Vector3f P01 = (1 - t) * cp[0] + t * cp[1];
+        Eigen::Vector3f P12 = (1 - t) * cp[1] + t * cp[2];
+        Eigen::Vector3f P23 = (1 - t) * cp[2] + t * cp[3];
+
+        Eigen::Vector3f a = (1 - t) * P01 + t * P12;
+        Eigen::Vector3f b = (1 - t) * P12 + t * P23;
+
+        return ((1 - t) * a) + (t * b);
+
+    }
+
+    Eigen::Vector3f eval_surface(float u, float v) {
+
+        Eigen::Vector3f ucurve_cp[4];
+        for (int i = 0; i < 4; ++i) {
+            // select 4 points for a curve
+            Eigen::Vector3f curve[4];
+            int k = i * 4;
+            curve[0] = control_points[k];
+            curve[1] = control_points[k + 1];
+            curve[2] = control_points[k + 2];
+            curve[3] = control_points[k + 3];
+            ucurve_cp[i] = eval_curve(curve, u);
+        }
+
+        auto z = eval_curve(ucurve_cp, v);
+        return z;
     }
 
     virtual void get_bounding_cube() {
@@ -447,90 +422,8 @@ public:
         b_cube_vertices[7] = Eigen::Vector4f(h.x(), h.y(), h.z(), 1.0f);
     }
 
-    inline Eigen::Vector3f eval_curve(Eigen::Vector3f cp[4], float t) {
-
-        Eigen::Vector3f P01 = (1 - t) * cp[0] + t * cp[1];
-        Eigen::Vector3f P12 = (1 - t) * cp[1] + t * cp[2];
-        Eigen::Vector3f P23 = (1 - t) * cp[2] + t * cp[3];
-
-        Eigen::Vector3f a = (1 - t) * P01 + t * P12;
-        Eigen::Vector3f b = (1 - t) * P12 + t * P23;
-
-        return ((1 - t) * a) + (t * b);
-
-    }
-
-    Eigen::Vector3f eval_surface(float u, float v) {
-
-        Eigen::Vector3f ucurve_cp[4];
-        for (int i = 0; i < 4; ++i) {
-            // select 4 points for a curve
-            Eigen::Vector3f curve[4];
-            int k = i * 4;
-            curve[0] = control_points[k];
-            curve[1] = control_points[k + 1];
-            curve[2] = control_points[k + 2];
-            curve[3] = control_points[k + 3];
-            ucurve_cp[i] = eval_curve(curve, u);
-        }
-
-        auto z = eval_curve(ucurve_cp, v);
-        return z;
-    }
-
-    Eigen::Vector3f dU(float u, float v) {
-
-        Eigen::Vector3f P[4];
-        Eigen::Vector3f v_curve[4];
-        for (int i = 0; i < 4; ++i) {
-            P[0] = control_points[i];
-            P[1] = control_points[4 + i];
-            P[2] = control_points[8 + i];
-            P[3] = control_points[12 + i];
-            v_curve[i] = eval_curve(P, v);
-        }
-
-        return -3 * (1 - u) * (1 - u) * v_curve[0] +
-            (3 * (1 - u) * (1 - u) - 6 * u * (1 - u)) * v_curve[1] +
-            (6 * u * (1 - u) - 3 * u * u) * v_curve[2] +
-            3 * u * u * v_curve[3];
-    }
-
-    Eigen::Vector3f dV(float u, float v)
-    {
-        Eigen::Vector3f u_curve[4];
-        for (int i = 0; i < 4; ++i) {
-
-            Eigen::Vector3f curve[4];
-            int k = i * 4;
-            curve[0] = control_points[k];
-            curve[1] = control_points[k + 1];
-            curve[2] = control_points[k + 2];
-            curve[3] = control_points[k + 3];
-            u_curve[i] = eval_curve(curve, u);
-
-        }
-
-        return -3 * (1 - v) * (1 - v) * u_curve[0] +
-            (3 * (1 - v) * (1 - v) - 6 * v * (1 - v)) * u_curve[1] +
-            (6 * v * (1 - v) - 3 * v * v) * u_curve[2] +
-            3 * v * v * u_curve[3];
-    }
-
-    virtual void get_3D_coordinates(float u_n, float v_n, Eigen::Vector4f& position, Eigen::Vector4f& normal) {
+    virtual Eigen::Vector4f get_3D_coordinates(float u_n, float v_n) {
         Eigen::Vector3f p = eval_surface(u_n, v_n);
-        position.x() = p.x();
-        position.y() = p.y();
-        position.z() = p.z();
-        position.w() = 1.0f;
-
-        Eigen::Vector3f dU_vec = dU(u_n, v_n);
-        Eigen::Vector3f dV_vec = dV(u_n, v_n);
-        Eigen::Vector3f n = dU_vec.cross(dV_vec);
-        normal.x() = n.x();
-        normal.y() = n.y();
-        normal.z() = n.z();
-        normal.w() = 0.0f;
-
+        return Eigen::Vector4f(p.x(), p.y(), p.z(), 1.0f);
     }
 };

@@ -1,8 +1,7 @@
 #include "Ri.h"
-#include "States.h"
 #include "Primitives.h"
+#include "States.h"
 #include "Renderer.h"
-//#include "Image.h"
 #include <iostream>
 
 #define PI 3.141592653589793238462643383279502884197
@@ -66,6 +65,10 @@ void RiEnd() {
 
 }
 
+void RiDisplay(char* fname, RtToken type, RtToken mode, ...) {
+	image_state.filename = std::string(fname);
+}
+
 void RiFormat(int x_resolution, int y_resolution, float pixelaspectratio) {
 	image_state.x_resolution = x_resolution;
 	image_state.y_resolution = y_resolution;
@@ -95,10 +98,11 @@ void RiColor(RtColor color) {
 	float g = color[1];
 	float b = color[2];
 
-	r *= 255.0f;
+	/*r *= 255.0f;
 	g *= 255.0f;
-	b *= 255.0f;
-	Color c = Color(r, g, b, 1.0f);
+	b *= 255.0f;*/
+	Color c;
+	c.set(r, g, b);
 	render_state.current_color = c;
 }
 
@@ -113,51 +117,38 @@ void RiProjection(T projetion_type, Args... args) {
 }
 */
 
+
 void RiWorldBegin() {
 	// Set the transformation matrix in render state according to the defined projection
 	//auto perspective = render_state.projection_type;
-	
-
 }
 
+
 void RiWorldEnd() {
+
 }
 
 
 void RiFrameEnd() {
-	
-	auto world_objects = world_state.objects;
-	//auto world_mesh = world_state.world_mesh;
-	auto world_to_view_transformation = render_state.transformation;
-	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 0, 50);
-	auto view_to_frame_transformation = get_perspective_projection_matrix(90.0, 1.0, 0.0, 100);
-
-	for (int i = 0; i < world_objects.size(); ++i) {
-		auto& object = world_objects[i];
-		auto model_to_world_matrix = object.model_to_world_matrix;
-		std::vector<Eigen::Vector4f> ndc_points;
-
-		for (int j = 0; j < object.vertices.size(); ++j) {
-			auto p = object.vertices[j];
-			p = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix * p;
-			p /= p.w();
-			ndc_points.push_back(p);
-		}
-		object.transformed_points = ndc_points;
-	}
-	render_frame(world_objects, render_state, image_state);
-
+	render_frame(world_state, render_state, image_state);
 }
+
 
 void RiTransformBegin() {
 	transformation_state.current_transformation = Eigen::Matrix4f::Identity();
 	transformation_state.is_in_transform_block = 1;
+	transformation_state.geometric_shade = nullptr;
+	transformation_state.surface_shader = nullptr;
 }
+
 
 void RiTransformEnd() {
 	transformation_state.current_transformation = Eigen::Matrix4f::Identity();
 	transformation_state.is_in_transform_block = 0;
+	transformation_state.geometric_shade = nullptr;
+	transformation_state.surface_shader = nullptr;
 }
+
 
 void RiTranslate(RtFloat dx, RtFloat dy, RtFloat dz) {
 	// Use actual matrix here
@@ -176,92 +167,26 @@ void RiTranslate(RtFloat dx, RtFloat dy, RtFloat dz) {
 	}
 }
 
-std::vector<Eigen::Vector4f> sphere_mesh(double radius)
-{
-	std::vector<Eigen::Vector4f> points;
-	int parallels = 25;
-	int meridians = 25;
-	double r = radius;
-	//points.push_back(Eigen::Vector4f(0.0f, r, 0.0f));
-	for (int j = 0; j < parallels - 1; ++j)
-	{
-		double const polar = PI * double(j + 1) / double(parallels);
-		double const sp = std::sin(polar);
-		double const cp = std::cos(polar);
-		for (int i = 0; i < meridians; ++i)
-		{
-			double const azimuth = 2.0 * PI * double(i) / double(meridians);
-			double const sa = std::sin(azimuth);
-			double const ca = std::cos(azimuth);
-			float const x = r * sp * ca;
-			float const y = r * cp;
-			float const z = r * sp * sa;
-			Eigen::Vector4f p;
-			p[0] = x;
-			p[1] = y;
-			p[2] = z;
-			p[3] = 1.0;
-			points.push_back(p);
-		}
-	}
-	//points.push_back(Eigen::Vector4f(0.0f, -1 * r, 0.0f));
-	return points;
-}
 
-void RiSphere(float radius, float zmin, float zmax, float tmax) {
-	auto model_to_world_matrix = transformation_state.current_transformation;
-	Sphere sphere = Sphere(radius, render_state.current_color);
-	sphere.model_to_world_matrix = model_to_world_matrix;
-	world_state.objects.push_back(sphere);	
-}
-
-
-/*
-void RiTorus(float majorRadius, float minorRadius, float phimin=0, float phimax=0, float tmax=0) {
-	auto torus_mesh_points = generate_torus_mesh(majorRadius, minorRadius);
-	auto model_to_world_matrix = transformation_state.current_transformation;
-	for (int i = 0; i < torus_mesh_points.size(); ++i) {
-		auto world_points = model_to_world_matrix * torus_mesh_points[i];
-		//world_state.world_mesh.push_back(world_points);
-	}
-}
-*/
-
-
-/*
-// **** verify actual use of dx, dy and dz
-// **** This is probably the wrong code
 void RiRotate(float rotation_angle, float dx, float dy, float dz) {
 
-	Eigen::Matrix4f model = Eigen::Matrix4f::Identity();
+	Eigen::Matrix4f model = Eigen::Matrix4f::Zero();
+	float angle = rotation_angle * PI / 180.0f;
 
-	// TODO: Implement this function
-	// Create the model matrix for rotating the triangle around the Z axis.
-	// Then return it.
-	rotation_angle *= PI / 180;//degrees to radians
+	float x = dx;
+	float y = dy;
+	float z = dz;
 
-	if (dz == 1)
-	{
-		model << cos(rotation_angle), -sin(rotation_angle), 0, 0,
-			sin(rotation_angle), cos(rotation_angle), 0, 0,
-			0, 0, 1, 0,
-			0, 0, 0, 1; //rotation about z-axis by rotation_angle
-	}
-	else if (dx == 1)
-	{
-		model << 1, 0, 0, 0,
-			0, cos(rotation_angle), -sin(rotation_angle), 0,
-			0, sin(rotation_angle), cos(rotation_angle), 0,
-			0, 0, 0, 1;
-	}
-	else if (dy == 1)
-	{
-		model << cos(rotation_angle), 0, sin(rotation_angle), 0,
-			0, 1, 0, 0,
-			-sin(rotation_angle), 0, cos(rotation_angle), 0,
-			0, 0, 0, 1;
-	}
-
+	model(0, 0) = x * x * (1 - cos(angle)) + cos(angle);
+	model(1, 0) = x * y * (1 - cos(angle)) + z * sin(angle);
+	model(2, 0) = x * z * (1 - cos(angle)) - y * sin(angle);
+	model(0, 1) = y * x * (1 - cos(angle)) - z * sin(angle);
+	model(1, 1) = y * y * (1 - cos(angle)) + cos(angle);
+	model(2, 1) = y * z * (1 - cos(angle)) + x * sin(angle);
+	model(0, 2) = z * x * (1 - cos(angle)) + y * sin(angle);
+	model(1, 2) = z * y * (1 - cos(angle)) - x * sin(angle);
+	model(2, 2) = z * z * (1 - cos(angle)) + cos(angle);
+	model(3, 3) = 1.0f;
 
 	if (transformation_state.is_in_transform_block) {
 		transformation_state.current_transformation = model * transformation_state.current_transformation;
@@ -270,5 +195,119 @@ void RiRotate(float rotation_angle, float dx, float dy, float dz) {
 		render_state.transformation = model * render_state.transformation;
 	}
 }
-*/
 
+void Ri_GeometricShader(void (*geometric_shade)(GeometricShaderPayload& p)) {
+	transformation_state.geometric_shade = geometric_shade;
+}
+
+void Ri_Texture(void (*surface_shader)(FragmentShaderPayload& p)) {
+	transformation_state.surface_shader = surface_shader;
+}
+
+
+template<typename T, typename... Args>
+void _generate(Args ... args) {
+	auto model_to_world_matrix = transformation_state.current_transformation;
+	auto world_to_view_transformation = render_state.transformation;
+	auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 1, 100);
+	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
+
+	std::unique_ptr<Primitive> ptr = std::make_unique<T>(std::forward<Args>(args)...);
+	ptr->primitive_color = render_state.current_color;
+	ptr->m = model_to_world_matrix;
+	ptr->v = world_to_view_transformation;
+	ptr->p = view_to_frame_transformation;
+	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+	ptr->geometric_shader = transformation_state.geometric_shade;
+	ptr->surface_shader = transformation_state.surface_shader;
+	//ptr->surface_shade = checkboard;
+	world_state.object_ptrs.push_back(std::move(ptr));
+}
+
+void RiSphere(float radius, float zmin, float zmax, float tmax) {
+	_generate<Sphere>(radius, -1 * radius, radius, 360.0f);
+}
+
+void RiCylinder(float radius, float zmin, float zmax, float tmax) {
+	_generate<Cylinder>(radius, zmin, zmax, tmax);
+}
+
+void RiTorus(float majorRadius, float minorRadius, float phimin, float phimax, float tmax) {
+	_generate<Torus>(majorRadius, minorRadius, phimin, phimax, tmax);
+}
+
+void Ri_Patch(std::vector<Eigen::Vector3f> cp) {
+	_generate<Patch>(cp, 5.0f);
+}
+
+
+//void RiSphere(float radius, float zmin, float zmax, float tmax) {
+//	auto model_to_world_matrix = transformation_state.current_transformation;
+//	auto world_to_view_transformation = render_state.transformation;
+//	auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 1, 100);
+//	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
+//
+//	std::unique_ptr<Primitive> ptr = std::make_unique<Sphere>(radius, -1* radius, radius, 360.0f);
+//	ptr->primitive_color = render_state.current_color;
+//	ptr->m = model_to_world_matrix;
+//	ptr->v = world_to_view_transformation;
+//	ptr->p = view_to_frame_transformation;
+//	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+//	ptr->geometric_shader = transformation_state.geometric_shade;
+//	//ptr->surface_shade = checkboard;
+//	world_state.object_ptrs.push_back(std::move(ptr));
+//	
+//}
+//
+//
+//void RiCylinder(float radius, float zmin, float zmax, float tmax) {
+//	auto model_to_world_matrix = transformation_state.current_transformation;
+//	auto world_to_view_transformation = render_state.transformation;
+//	auto view_to_frame_transformation = get_perspective_projection_matrix(90.0f, 1.0, 1, 100);
+//	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
+//
+//	std::unique_ptr<Primitive> ptr = std::make_unique<Cylinder>(radius, zmin, zmax, tmax);
+//	ptr->primitive_color = render_state.current_color;
+//	ptr->m = model_to_world_matrix;
+//	ptr->v = world_to_view_transformation;
+//	ptr->p = view_to_frame_transformation;
+//	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+//	ptr->geometric_shader = transformation_state.geometric_shade;
+//	//ptr->surface_shade = checkboard;
+//	world_state.object_ptrs.push_back(std::move(ptr));
+//}
+//
+//
+//void RiTorus(float majorRadius, float minorRadius, float phimin, float phimax, float tmax) {
+//	auto model_to_world_matrix = transformation_state.current_transformation;
+//	auto world_to_view_transformation = render_state.transformation;
+//	auto view_to_frame_transformation = get_perspective_projection_matrix(90.0f, 1.0, 1, 100);
+//	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
+//
+//	std::unique_ptr<Primitive> ptr = std::make_unique<Torus>(majorRadius, minorRadius, phimin, phimax, tmax);
+//	ptr->primitive_color = render_state.current_color;
+//	ptr->m = model_to_world_matrix;
+//	ptr->v = world_to_view_transformation;
+//	ptr->p = view_to_frame_transformation;
+//	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+//	ptr->geometric_shader = transformation_state.geometric_shade;
+//	//ptr->surface_shade = checkboard;
+//	world_state.object_ptrs.push_back(std::move(ptr));
+//}
+//
+//
+//void Ri_Patch(std::vector<Eigen::Vector3f> cp) {
+//	auto model_to_world_matrix = transformation_state.current_transformation;
+//	auto world_to_view_transformation = render_state.transformation;
+//	//auto view_to_frame_transformation = get_perspective_projection_matrix(90.0f, 1.0, 1, 100);
+//	auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 0.01, 100);
+//
+//	std::unique_ptr<Primitive> ptr = std::make_unique<Patch>(cp, 5.0f);
+//	ptr->primitive_color = render_state.current_color;
+//	ptr->m = model_to_world_matrix;
+//	ptr->v = world_to_view_transformation;
+//	ptr->p = view_to_frame_transformation;
+//	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+//	ptr->geometric_shader = transformation_state.geometric_shade;
+//	world_state.object_ptrs.push_back(std::move(ptr));
+//}
