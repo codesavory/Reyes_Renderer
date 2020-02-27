@@ -7,3 +7,4 @@ void checker_explode(GeometricShaderPayload& p);
 void earth(FragmentShaderPayload& p);
 void blinn_phong(FragmentShaderPayload& p);
 void blinn_phong_modded(FragmentShaderPayload& p);
+void phong(FragmentShaderPayload& p);

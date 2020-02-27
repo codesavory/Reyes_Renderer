@@ -94,7 +94,7 @@ void blinn_phong(FragmentShaderPayload& p) {
     Eigen::Vector3f ambient = amb_light_intensity.cwiseProduct(ka);
 
 
-    Eigen::Vector3f light_pos(0.0, 0.0, -45.0);
+    Eigen::Vector3f light_pos(0, 5, 0);
     Eigen::Vector3f light_intensity(600.0f, 600.0f, 600.0f);
 
     Eigen::Vector3f vert_pos(p.pos.x(), p.pos.y(), p.pos.z());
@@ -158,4 +158,41 @@ void blinn_phong_modded(FragmentShaderPayload& p) {
     result_color += ambient + diffuse + specular;
 
     p.c.set(result_color[0], result_color[1], result_color[2]);
+}
+
+
+//Phong lighting
+float LIGHTING_REFLECTIVITY = 15;
+float LIGHTING_SPEC_ATTEN = 1.0f;
+void phong(FragmentShaderPayload& p) {
+    //All positions are in eye space
+    Eigen::Vector3f fragPos(p.pos.x(), p.pos.y(), p.pos.z());
+    Eigen::Vector3f lightPos(0, 5, 0);
+    Eigen::Vector3f normal(p.normal.x(), p.normal.y(), p.normal.z());
+    normal.normalize();
+    Eigen::Vector3f eyeDir = -1 * fragPos.normalized();
+
+    //make normal frontfacing
+    if (eyeDir.dot(normal) < 0)
+        normal = -normal;
+    Eigen::Vector3f lightDir = (lightPos - fragPos).normalized();
+
+    //diffuse lighting factor
+    float diffuse = std::max(lightDir.dot(normal), 0.0f);
+
+
+    /*Vector4 reflect(Vector4 & normal) {
+        return *this - normal * 2 * this->dot3(normal);
+    }*/
+
+    
+    //specular lighting factor
+    Eigen::Vector3f reflectDir = (-1 * lightDir) - normal * 2 * (-1 * lightDir).dot(normal);
+    float specular = pow(std::max(eyeDir.dot(reflectDir), 0.0f), LIGHTING_REFLECTIVITY) * LIGHTING_SPEC_ATTEN;
+
+    float r = std::min((diffuse + 0.2f) * p.c.r() + specular * 1.0f, 1.0f);
+    float g = std::min((diffuse + 0.2f) * p.c.g() + specular * 1.0f, 1.0f);
+    float b = std::min((diffuse + 0.2f) * p.c.b() + specular * 1.0f, 1.0f);
+
+    p.c.set(r, g, b);
 }

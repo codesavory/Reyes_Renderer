@@ -111,7 +111,7 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
 
 
                     //surface_shader(p);
-                    //blinn_phong_modded(p);
+                    phong(p);
                     c_interpolated = p.c;
                     fb(x, y, m, n) = c_interpolated;
 
