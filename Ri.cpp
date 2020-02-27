@@ -154,10 +154,10 @@ void RiTranslate(RtFloat dx, RtFloat dy, RtFloat dz) {
 		0, 0, 0, 1;
 	
 	if (transformation_state.is_in_transform_block) {
-		transformation_state.current_transformation = model * transformation_state.current_transformation;
+		transformation_state.current_transformation = transformation_state.current_transformation * model;
 	}
 	else {
-		render_state.transformation = model * render_state.transformation;
+		render_state.transformation = render_state.transformation * model;
 	}
 }
 
@@ -183,10 +183,10 @@ void RiRotate(float rotation_angle, float dx, float dy, float dz) {
 	model(3, 3) = 1.0f;
 
 	if (transformation_state.is_in_transform_block) {
-		transformation_state.current_transformation = model * transformation_state.current_transformation;
+		transformation_state.current_transformation = transformation_state.current_transformation * model;
 	}
 	else {
-		render_state.transformation = model * render_state.transformation;
+		render_state.transformation = render_state.transformation * model;
 	}
 }
 
@@ -198,7 +198,7 @@ void RiSphere(float radius, float zmin, float zmax, float tmax) {
 	//auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 1, 100);
 	auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
 
-	std::unique_ptr<Primitive> ptr = std::make_unique<Sphere>(radius, -1* radius, radius, 360.0f);
+	std::unique_ptr<Primitive> ptr = std::make_unique<Sphere>(radius, zmin, zmax, tmax);
 	ptr->primitive_color = render_state.current_color;
 	ptr->m = model_to_world_matrix;
 	ptr->v = world_to_view_transformation;

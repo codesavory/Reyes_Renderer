@@ -112,7 +112,7 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
 
 
                     //surface_shader(p);
-                    light(p);
+                    //light(p);
                     c_interpolated = p.c;
                     fb(x, y, m, n) = c_interpolated;
 
@@ -179,13 +179,13 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
 
             Eigen::Vector4f sp = objPtr -> mvp * p;
             // For some reason x axis and y axis are flipped, so multiplying by -1
-            sp.x() = sp.x() / sp.w() * -1;
-            sp.y() = sp.y() / sp.w() * -1;
+            sp.x() = sp.x() / sp.w() * 1;
+            sp.y() = sp.y() / sp.w() * 1;
             sp.z() = sp.z() / sp.w();
 
             Eigen::Vector4f wp = objPtr -> m * p;
-            wp.x() = wp.x() * -1;
-            wp.y() = wp.y() * -1;
+            wp.x() = wp.x() * 1;
+            wp.y() = wp.y() * 1;
 
 			Eigen::Vector4f pixel_coordinate_space;
 

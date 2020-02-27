@@ -61,30 +61,32 @@ void SampleScene1(void) {
 
 	RiBegin(RI_NULL);
 
-	RiFormat(500, 500, 1);
+	RiFormat(512, 512, 1.0);
 	RiPixelSamples(2, 2);
 	RiShutter(0, 1);
 
 	/* new code*/
 	RiFrameBegin(1);
-	RiTranslate(0, 0, -50);
+	//RiTranslate(0, 0, -50);
 
 	RiWorldBegin();
-	RiTransformBegin();
 
-	RiTranslate(0, 0, -10);
-	RiColor(red);
-	RiSphere(15, 0, 0, 0);
+	RiTransformBegin();
+	RtColor color = { 1,0,0 };
+	RiColor(color);
+	RiTranslate(0, 0.5, 7.0);
+	RiRotate(60, 1, 0, 0);
+	RiTorus(1, .25, 0, 360, 360);
 	RiTransformEnd();
 
 	RiTransformBegin();
-	RiTranslate(10, 0, 10);
-	RiColor(blue);
-	RiSphere(5, 0, 0, 0);
-	
-	
-	//RiTorus(40, 20, 0, 0, 0);
+	color[1] = 0; color[2] = 1;
+	RiColor(color);
+	RiTranslate(0, 1, 9.0);
+	RiRotate(60, 1, 0, 0);
+	RiSphere(1.0, -1.0, 1.0, 360);
 	RiTransformEnd();
+	
 	RiWorldEnd();
 	RiFrameEnd();
 	RiEnd();
