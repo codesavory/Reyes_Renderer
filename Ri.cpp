@@ -12,6 +12,9 @@ RenderState render_state;
 TransformationState transformation_state;
 WorldState world_state;
 
+RtToken RI_PERSPECTIVE = "perspective";
+RtToken RI_ORTHOGRAPHIC = "orthgraphic";
+
 Eigen::Matrix4f get_ortho_projection_matrix(float width, float height, float zFar, float zNear)
 {
 	Eigen::Matrix4f ortho_projection = Eigen::Matrix4f::Identity();
@@ -59,6 +62,7 @@ void RiBegin(RtToken token) {
 	// TODO add reyes defaults
 	render_state = RenderState();
 	camera_state = CameraState();
+	world_state = WorldState();
 }
 
 void RiEnd() {
@@ -72,7 +76,7 @@ void RiDisplay(char* fname, RtToken type, RtToken mode, ...) {
 void RiFormat(int x_resolution, int y_resolution, float pixelaspectratio) {
 	image_state.x_resolution = x_resolution;
 	image_state.y_resolution = y_resolution;
-	image_state.pixelaspectratio = pixelaspectratio;
+	image_state.pixel_aspect_ratio = pixelaspectratio;
 
 	//set default frame aspect ratio as image aspect ratio
 	render_state.frame_aspect_ratio = (x_resolution * pixelaspectratio) / y_resolution;
@@ -110,12 +114,32 @@ void RiFrameAspectRatio(float aspect_ratio) {
 	render_state.frame_aspect_ratio = aspect_ratio;
 }
 
-/*
-template<typename T, typename... Args>
-void RiProjection(T projetion_type, Args... args) {
+//void RiProjection(RtToken name) {
+//	auto aspect_ratio = image_state.pixel_aspect_ratio;
+//	auto width = image_state.x_resolution;
+//	auto height = image_state.y_resolution;
+//	if (name == RI_PERSPECTIVE) {
+//		float aspect = aspect_ratio * (float)width / height;
+//		auto projection_matrix = get_perspective_projection_matrix(45.0f, aspect, 1, 100);
+//		render_state.view_to_frame_transformation = projection_matrix;
+//	}
+//	else if (name == RI_ORTHOGRAPHIC) {
+//		auto projection_matrix = get_ortho_projection_matrix(50, 50, 1, 100);
+//		render_state.view_to_frame_transformation = projection_matrix;
+//	}
+//}
+
+void RiProjection(RtToken projection_type, RtToken fov_t, float* fov, RtToken m) {
 	//https://renderman.pixar.com/resources/RenderMan_20/options.html#riprojection
+
+	//auto aspect_ratio = image_state.pixel_aspect_ratio;
+	auto width = image_state.x_resolution;
+	auto height = image_state.y_resolution;
+	float aspect = 1.0f * (float)width / (float)height;
+
+	auto projection_matrix = get_perspective_projection_matrix(*fov, aspect, 0, 100);
+	render_state.view_to_frame_transformation = projection_matrix;
 }
-*/
 
 
 void RiWorldBegin() {
@@ -131,6 +155,8 @@ void RiWorldEnd() {
 
 void RiFrameEnd() {
 	render_frame(world_state, render_state, image_state);
+
+	world_state.~WorldState();
 }
 
 
@@ -163,7 +189,7 @@ void RiTranslate(RtFloat dx, RtFloat dy, RtFloat dz) {
 		transformation_state.current_transformation = transformation_state.current_transformation * model;
 	}
 	else {
-		render_state.transformation = render_state.transformation * model;
+		render_state.world_to_view_transformation = render_state.world_to_view_transformation * model;
 	}
 }
 
@@ -192,7 +218,7 @@ void RiRotate(float rotation_angle, float dx, float dy, float dz) {
 		transformation_state.current_transformation = transformation_state.current_transformation * model;
 	}
 	else {
-		render_state.transformation = render_state.transformation * model;
+		render_state.world_to_view_transformation = render_state.world_to_view_transformation * model;
 	}
 }
 
@@ -207,36 +233,41 @@ void Ri_Texture(void (*surface_shader)(FragmentShaderPayload& p)) {
 
 template<typename T, typename... Args>
 void _generate(Args ... args) {
-	auto model_to_world_matrix = transformation_state.current_transformation;
-	auto world_to_view_transformation = render_state.transformation;
-	auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 1, 100);
-	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
-
+	auto model_to_world_transformation = transformation_state.current_transformation;
+	auto world_to_view_transformation = render_state.world_to_view_transformation;
+	auto view_to_frame_transformation = render_state.view_to_frame_transformation;
+	//auto view_to_frame_transformation = get_perspective_projection_matrix(45.0f, 1.0f, 1, 100);
+	//auto view_to_frame_transformation = get_ortho_projection_matrix(50,50, 0, 100);
+	
 	std::unique_ptr<Primitive> ptr = std::make_unique<T>(std::forward<Args>(args)...);
 	ptr->primitive_color = render_state.current_color;
-	ptr->m = model_to_world_matrix;
+	ptr->m = model_to_world_transformation;
 	ptr->v = world_to_view_transformation;
 	ptr->p = view_to_frame_transformation;
-	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_transformation;
 	ptr->geometric_shader = transformation_state.geometric_shade;
 	ptr->surface_shader = transformation_state.surface_shader;
 	//ptr->surface_shade = checkboard;
 	world_state.object_ptrs.push_back(std::move(ptr));
 }
 
-void RiSphere(float radius, float zmin, float zmax, float tmax) {
+void RiSphere(float radius, float zmin, float zmax, float tmax, RtToken mode) {
 	_generate<Sphere>(radius, zmin, zmax, tmax);
 }
 
-void RiCylinder(float radius, float zmin, float zmax, float tmax) {
+void RiCylinder(float radius, float zmin, float zmax, float tmax, RtToken mode) {
 	_generate<Cylinder>(radius, zmin, zmax, tmax);
 }
 
-void RiTorus(float majorRadius, float minorRadius, float phimin, float phimax, float tmax) {
+void RiTorus(float majorRadius, float minorRadius, float phimin, float phimax, float tmax, RtToken mode) {
 	_generate<Torus>(majorRadius, minorRadius, phimin, phimax, tmax);
 }
 
-void Ri_Patch(std::vector<Eigen::Vector3f> cp) {
+void RiCone(float height, float radius, float tmax, RtToken mode) {
+	_generate<Cone>(height, radius, tmax);
+}
+
+void Ri_Patch(std::vector<Eigen::Vector3f> cp, RtToken mode) {
 	_generate<Patch>(cp, 5.0f);
 }
 

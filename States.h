@@ -6,7 +6,7 @@
 class ImageState {
 public:
 	int x_resolution, y_resolution;
-	float pixelaspectratio;
+	float pixel_aspect_ratio;
 	std::string filename;
 
 	ImageState() {
@@ -67,8 +67,10 @@ public:
 	int f_no;
 	int is_in_world_block;
 
-	// This matrix represent world-to-camera and camera-to-screen projection combined
-	Eigen::Matrix4f transformation;
+	// world-to-camera
+	Eigen::Matrix4f world_to_view_transformation;
+	// camera - to - screen projection 
+	Eigen::Matrix4f view_to_frame_transformation;
 
 	void (*surface_shade)(FragmentShaderPayload& p);
 	std::shared_ptr<Texture> texture;
@@ -77,7 +79,8 @@ public:
 		//projection_type = RI_ORTHOGRAPHIC;
 		zNear = 0.0;
 		zFar = 100.0;
-		transformation = Eigen::Matrix4f::Identity();
+		world_to_view_transformation = Eigen::Matrix4f::Identity();
+		view_to_frame_transformation = Eigen::Matrix4f::Identity();
 		surface_shade = nullptr;
 	}
 };

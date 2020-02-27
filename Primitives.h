@@ -139,11 +139,6 @@ public:
                 Eigen::Vector4f normal;
 
                 get_3D_coordinates(u_n, v_n, position, normal);
-                //normal = position.normalized();
-                /*position.w() = 0.0f;
-                 = position.normalized();
-                normal.w() = 1.0f;
-                position.w() = 1.0f;*/
 
                 points[i] = position;
                 normals[i] = normal;
