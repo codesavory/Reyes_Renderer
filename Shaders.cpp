@@ -132,7 +132,7 @@ void blinn_phong_modded(FragmentShaderPayload& p) {
     Eigen::Vector3f ambient = amb_light_intensity.cwiseProduct(kd / 45);
 
 
-    Eigen::Vector3f light_pos(0.0, 0.0, -45.0);
+    Eigen::Vector3f light_pos(-10.0, 0.0, 0.0);
     Eigen::Vector3f light_intensity(600.0f, 600.0f, 600.0f);
 
     Eigen::Vector3f vert_pos(p.pos.x(), p.pos.y(), p.pos.z());

@@ -91,7 +91,6 @@ void RiShutter(float shutter_min, float shutter_max) {
 void RiFrameBegin(int i) {
 	render_state.f_no = i;
 	//render_state.projection_type = RI_ORTHOGRAPHIC;
-	//image_state.filename += std::to_string(i);
 }
 
 void RiColor(RtColor color) {
@@ -139,6 +138,7 @@ void RiTransformBegin() {
 	transformation_state.current_transformation = Eigen::Matrix4f::Identity();
 	transformation_state.is_in_transform_block = 1;
 	transformation_state.geometric_shade = nullptr;
+	transformation_state.surface_shader = nullptr;
 }
 
 
@@ -146,6 +146,7 @@ void RiTransformEnd() {
 	transformation_state.current_transformation = Eigen::Matrix4f::Identity();
 	transformation_state.is_in_transform_block = 0;
 	transformation_state.geometric_shade = nullptr;
+	transformation_state.surface_shader = nullptr;
 }
 
 
@@ -199,6 +200,10 @@ void Ri_GeometricShader(void (*geometric_shade)(GeometricShaderPayload& p)) {
 	transformation_state.geometric_shade = geometric_shade;
 }
 
+void Ri_Texture(void (*surface_shader)(FragmentShaderPayload& p)) {
+	transformation_state.surface_shader = surface_shader;
+}
+
 
 template<typename T, typename... Args>
 void _generate(Args ... args) {
@@ -214,6 +219,7 @@ void _generate(Args ... args) {
 	ptr->p = view_to_frame_transformation;
 	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
 	ptr->geometric_shader = transformation_state.geometric_shade;
+	ptr->surface_shader = transformation_state.surface_shader;
 	//ptr->surface_shade = checkboard;
 	world_state.object_ptrs.push_back(std::move(ptr));
 }

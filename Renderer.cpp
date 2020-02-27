@@ -110,7 +110,7 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
                     p.c = c_interpolated;
 
 
-                    //surface_shader(p);
+                    surface_shader(p);
                     blinn_phong_modded(p);
                     c_interpolated = p.c;
                     fb(x, y, m, n) = c_interpolated;
@@ -173,6 +173,7 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
         std::unique_ptr<Primitive> objPtr = std::move(world_obj_ptrs[i]);
         objPtr->build(width, height);
         objPtr->sh();
+        surface_shader = objPtr->surface_shader;
 
         auto& points = objPtr->points;
         for (int j = 0; j < points.size(); ++j) {
