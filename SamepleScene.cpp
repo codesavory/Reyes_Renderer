@@ -62,7 +62,7 @@ void SampleScene1(void) {
 
 	RiBegin(RI_NULL);
 
-	RiFormat(512, 512, 1.0);
+	RiFormat(400, 300, 1.0);
 	RiPixelSamples(2, 2);
 	RiShutter(0, 1);
 
@@ -79,7 +79,7 @@ void SampleScene1(void) {
 	RiColor(color);
 	RiTranslate(0, 0.5, 7.0);
 	RiRotate(60, 1, 0, 0);
-	RiTorus(1, .25, 0, 360, 360);
+	RiTorus(1, .25, 0, 360, 360, RI_NULL);
 	RiTransformEnd();
 
 	
@@ -89,7 +89,7 @@ void SampleScene1(void) {
 	RiTranslate(0, 0, 8.0);
 	RiRotate(60, 1, 0, 0);
 	RiRotate(30, 0, 1, 0);
-	RiCylinder(1, -1, 1, 360);
+	RiCylinder(1, -1, 1, 360, RI_NULL);
 	RiTransformEnd();
 
 	RiTransformBegin();
@@ -97,7 +97,7 @@ void SampleScene1(void) {
 	RiColor(color);
 	RiTranslate(0, 1, 9.0);
 	RiRotate(60, 1, 0, 0);
-	RiSphere(1.0, -1.0, 1.0, 360);
+	RiSphere(1.0, -1.0, 1.0, 360, RI_NULL);
 	RiTransformEnd();
 	
 	RiWorldEnd();
