@@ -29,12 +29,14 @@ public:
 	// Set using Ri* transformation functions when inside an RiTRansformBegin block
 	Eigen::Matrix4f current_transformation;
 	void (*geometric_shade)(GeometricShaderPayload& p);
+	void (*surface_shader)(FragmentShaderPayload& p);
 	int is_in_transform_block;
 
 	TransformationState() {
 		is_in_transform_block = 0;
 		current_transformation = Eigen::Matrix4f::Identity();
 		geometric_shade = nullptr;
+		surface_shader = nullptr;
 	}
 };
 

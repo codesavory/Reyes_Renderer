@@ -25,6 +25,7 @@ public:
     std::vector<TriangleVerts> triangle_verts;
 
     void (*geometric_shader)(GeometricShaderPayload& p) = nullptr;
+    void (*surface_shader)(FragmentShaderPayload& p) = nullptr;
 
     void setup_vectors(int l) {
         world_points.resize(l);

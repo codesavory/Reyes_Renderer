@@ -173,6 +173,7 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
         std::unique_ptr<Primitive> objPtr = std::move(world_obj_ptrs[i]);
         objPtr->build(width, height);
         objPtr->sh();
+        surface_shader = objPtr->surface_shader;
 
         auto& points = objPtr->points;
         for (int j = 0; j < points.size(); ++j) {
