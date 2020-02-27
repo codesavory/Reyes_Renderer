@@ -105,6 +105,15 @@ public:
                 bb_top_y = screen_y;
         }
 
+        // clamp to left edge
+        bb_left_x = std::max(bb_left_x, 0.0f);
+        //clamp to right edge
+        bb_right_x = std::min(bb_right_x, (float)width);
+        //clamp to bottom edge
+        bb_bottom_y = std::max(bb_bottom_y, 0.0f);
+        //clamp to top edge
+        bb_top_y = std::min(bb_top_y, (float)height);
+
         //if it will be on the screen, how many pixels will it take up?
         int xFactor = (bb_right_x - bb_left_x) * MICROPOLYGONS_PER_PIXEL;
         int yFactor = (bb_top_y - bb_bottom_y) * MICROPOLYGONS_PER_PIXEL;
