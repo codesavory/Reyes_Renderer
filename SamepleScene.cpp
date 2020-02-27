@@ -85,7 +85,7 @@ void SampleScene1(void) {
 	RiRotate(90.0f, -1.0, 0.0, 0.0);
 	RiColor(blue);
 	//parse_teapot_patches();
-	Ri_Texture(earth);
+	//Ri_Texture(earth);
 	RiSphere(20, 0, 0, 0);
 	RiTransformEnd();
 	
