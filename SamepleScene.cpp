@@ -6,6 +6,7 @@
 //#include "Reyes_Impl.h"
 #include <fstream>
 #include <numeric>
+#include "Shaders.h";
 
 
 inline void parse_teapot_patches() {
@@ -77,6 +78,15 @@ void SampleScene1(void) {
 	RiTranslate(0, 0.5, 7.0);
 	RiRotate(60, 1, 0, 0);
 	RiTorus(1, .25, 0, 360, 360);
+	RiTransformEnd();
+
+	RiTransformBegin();
+	color[0] = 0; color[1] = 1;
+	RiColor(color);
+	RiTranslate(0, 0, 8.0);
+	RiRotate(60, 1, 0, 0);
+	RiRotate(30, 0, 1, 0);
+	RiCylinder(1, -1, 1, 360);
 	RiTransformEnd();
 
 	RiTransformBegin();

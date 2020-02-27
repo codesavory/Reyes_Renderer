@@ -4,7 +4,8 @@
 * (for ANSI Standard C)
 */
 /* Definitions of Abstract Types used in RI */
-#include "Eigen/Eigen"
+#include <Eigen/Eigen>
+#include "Types.h"
 
 typedef short RtBoolean;
 typedef int RtInt;
@@ -316,6 +317,7 @@ RiReadArchiveV(RtToken name, RtArchiveCallback callback,
 extern RtVoid
 RiErrorHandler(RtErrorHandler handler);
 void Ri_Patch(std::vector<Eigen::Vector3f> cp);
+void Ri_GeometricShader(void (*geometric_shade)(GeometricShaderPayload& p));
 /*
 Error Codes
 1 - 10 System and File Errors

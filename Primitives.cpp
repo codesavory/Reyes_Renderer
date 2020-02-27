@@ -5,7 +5,7 @@
 #include "Shaders.h"
 
 #define PI 3.141592653589793238462643383279502884197
-#define MICROPOLYGONS_PER_PIXEL 1
+#define MICROPOLYGONS_PER_PIXEL 4
 
 
 class Primitive {
@@ -81,7 +81,7 @@ public:
 
         float bb_left_x = std::numeric_limits<float>::infinity();
         float bb_right_x = -1 * std::numeric_limits<float>::infinity();
-        float bb_top_y = -1 * std::numeric_limits<float>::infinity(); 
+        float bb_top_y = -1 * std::numeric_limits<float>::infinity();
         float bb_bottom_y = std::numeric_limits<float>::infinity();
 
         for (int i = 0; i < 8; ++i) {
@@ -121,7 +121,7 @@ public:
         int i = 0;
         for (int u = 0; u < grid_width; ++u) {
             for (int v = 0; v < grid_height; ++v) {
-                
+
                 float u_n = (float)u / ((float)grid_width - 1);
                 float v_n = (float)v / ((float)grid_height - 1);
 
@@ -164,6 +164,7 @@ public:
         generate_mesh_points(dice_factor, dice_factor);
         generate_polygons();
         set_primitive_color();
+        sh();
         //texture_map();
         //shade();
 
@@ -179,9 +180,6 @@ public:
     }
 
     void sh() {
-        if (geometric_shader == nullptr)
-            return;
-
         GeometricShaderPayload p;
         p.dice_factor = dice_factor;
         p.normals = normals;
@@ -194,8 +192,8 @@ public:
         points = p.points;
         triangle_verts = p.triangle_verts;
     }
-    
-    
+
+
 };
 
 
@@ -259,9 +257,9 @@ public:
 
     virtual void get_bounding_cube() {
         b_cube_vertices[0] = Eigen::Vector4f(radius, radius, zmin, 1.0f);
-        b_cube_vertices[1] = Eigen::Vector4f(-1*radius, radius, zmin, 1.0f);
-        b_cube_vertices[2] = Eigen::Vector4f(-1 * radius, -1*radius, zmin, 1.0f);
-        b_cube_vertices[3] = Eigen::Vector4f(radius, -1*radius, zmin, 1.0f);
+        b_cube_vertices[1] = Eigen::Vector4f(-1 * radius, radius, zmin, 1.0f);
+        b_cube_vertices[2] = Eigen::Vector4f(-1 * radius, -1 * radius, zmin, 1.0f);
+        b_cube_vertices[3] = Eigen::Vector4f(radius, -1 * radius, zmin, 1.0f);
 
         b_cube_vertices[4] = Eigen::Vector4f(radius, radius, zmax, 1.0f);
         b_cube_vertices[5] = Eigen::Vector4f(-1 * radius, radius, zmax, 1.0f);
@@ -299,13 +297,13 @@ public:
         this->theta_max = tmax * PI / 180.0f;
     }
 
-    
+
     virtual void get_bounding_cube() {
         float big_r = major_r + minor_r;
         b_cube_vertices[0] = Eigen::Vector4f(big_r, big_r, -minor_r, 1.0f);
-        b_cube_vertices[1] = Eigen::Vector4f(-1*big_r, big_r, -minor_r, 1.0f);
-        b_cube_vertices[2] = Eigen::Vector4f(-1*big_r, -1*big_r, -minor_r, 1.0f);
-        b_cube_vertices[3] = Eigen::Vector4f(big_r, -1*big_r, -minor_r, 1.0f);
+        b_cube_vertices[1] = Eigen::Vector4f(-1 * big_r, big_r, -minor_r, 1.0f);
+        b_cube_vertices[2] = Eigen::Vector4f(-1 * big_r, -1 * big_r, -minor_r, 1.0f);
+        b_cube_vertices[3] = Eigen::Vector4f(big_r, -1 * big_r, -minor_r, 1.0f);
 
         b_cube_vertices[4] = Eigen::Vector4f(big_r, big_r, minor_r, 1.0f);
         b_cube_vertices[5] = Eigen::Vector4f(-1 * big_r, big_r, minor_r, 1.0f);
@@ -313,7 +311,7 @@ public:
         b_cube_vertices[7] = Eigen::Vector4f(big_r, -1 * big_r, minor_r, 1.0f);
     }
 
-    
+
     virtual Eigen::Vector4f get_3D_coordinates(float u_n, float v_n) {
         Eigen::Vector4f position;
 
@@ -337,7 +335,7 @@ class Patch : public Primitive {
 public:
     std::vector<Eigen::Vector3f> control_points;
 
-    
+
     Patch(std::vector<Eigen::Vector3f> cp, float scale) {
         this->control_points = cp;
         for (int i = 0; i < control_points.size(); ++i)
@@ -384,7 +382,7 @@ public:
 
         for (int i = 0; i < 16; ++i) {
             auto p = control_points[i];
-            
+
             if (p.x() < l.x())
                 l.x() = p.x();
 

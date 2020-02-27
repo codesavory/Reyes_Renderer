@@ -1,9 +1,8 @@
 #include "Ri.h"
-#include "Types.h"
+//#include "Types.h"
 #include "Primitives.h"
 #include "States.h"
 #include "Renderer.h"
-#include "Shaders.h"
 #include <iostream>
 
 #define PI 3.141592653589793238462643383279502884197
@@ -135,12 +134,14 @@ void RiFrameEnd() {
 void RiTransformBegin() {
 	transformation_state.current_transformation = Eigen::Matrix4f::Identity();
 	transformation_state.is_in_transform_block = 1;
+	transformation_state.geometric_shade = nullptr;
 }
 
 
 void RiTransformEnd() {
 	transformation_state.current_transformation = Eigen::Matrix4f::Identity();
 	transformation_state.is_in_transform_block = 0;
+	transformation_state.geometric_shade = nullptr;
 }
 
 
@@ -195,8 +196,8 @@ void RiRotate(float rotation_angle, float dx, float dy, float dz) {
 void RiSphere(float radius, float zmin, float zmax, float tmax) {
 	auto model_to_world_matrix = transformation_state.current_transformation;
 	auto world_to_view_transformation = render_state.transformation;
-	//auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 1, 100);
-	auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
+	auto view_to_frame_transformation = get_perspective_projection_matrix(45.0, 1.0, 1, 100);
+	//auto view_to_frame_transformation = get_ortho_projection_matrix(50, 50, 1, 100);
 
 	std::unique_ptr<Primitive> ptr = std::make_unique<Sphere>(radius, zmin, zmax, tmax);
 	ptr->primitive_color = render_state.current_color;
@@ -204,6 +205,7 @@ void RiSphere(float radius, float zmin, float zmax, float tmax) {
 	ptr->v = world_to_view_transformation;
 	ptr->p = view_to_frame_transformation;
 	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+	ptr->geometric_shader = transformation_state.geometric_shade;
 	//ptr->surface_shade = checkboard;
 	world_state.object_ptrs.push_back(std::move(ptr));
 	
@@ -222,6 +224,7 @@ void RiCylinder(float radius, float zmin, float zmax, float tmax) {
 	ptr->v = world_to_view_transformation;
 	ptr->p = view_to_frame_transformation;
 	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+	ptr->geometric_shader = transformation_state.geometric_shade;
 	//ptr->surface_shade = checkboard;
 	world_state.object_ptrs.push_back(std::move(ptr));
 }
@@ -239,6 +242,7 @@ void RiTorus(float majorRadius, float minorRadius, float phimin, float phimax, f
 	ptr->v = world_to_view_transformation;
 	ptr->p = view_to_frame_transformation;
 	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
+	ptr->geometric_shader = transformation_state.geometric_shade;
 	//ptr->surface_shade = checkboard;
 	world_state.object_ptrs.push_back(std::move(ptr));
 }
@@ -256,8 +260,11 @@ void Ri_Patch(std::vector<Eigen::Vector3f> cp) {
 	ptr->v = world_to_view_transformation;
 	ptr->p = view_to_frame_transformation;
 	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_matrix;
-	//ptr->surface_shade = checkboard;
+	ptr->geometric_shader = transformation_state.geometric_shade;
 	world_state.object_ptrs.push_back(std::move(ptr));
 }
 
 
+void Ri_GeometricShader(void (*geometric_shade)(GeometricShaderPayload& p)) {
+	transformation_state.geometric_shade = geometric_shade;
+}
