@@ -125,7 +125,7 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
 
 
 void pimage(FrameBuffer frame_buffer, const char* filename) {
-    const char* f = "D:\\stbjpg3.jpg";
+    //const char* f = "D:\\stbjpg3.jpg";
     const int CHANNEL_NUM = 3;
 
     int width = frame_buffer.w;
@@ -149,7 +149,7 @@ void pimage(FrameBuffer frame_buffer, const char* filename) {
         }
     }
 
-    stbi_write_jpg(f, width, height, 3, out_buffer, 100);
+    stbi_write_jpg(filename, width, height, 3, out_buffer, 100);
     delete[] out_buffer;
 }
 
@@ -267,6 +267,6 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
     }
 
 
-    pimage(frame_buffer, image_state.filename);
+    pimage(frame_buffer, image_state.filename.c_str());
 
 }

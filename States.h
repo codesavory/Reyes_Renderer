@@ -7,10 +7,10 @@ class ImageState {
 public:
 	int x_resolution, y_resolution;
 	float pixelaspectratio;
-	const char* filename;
+	std::string filename;
 
 	ImageState() {
-		filename = nullptr;
+		filename = "default.jpg";
 	}
 };
 

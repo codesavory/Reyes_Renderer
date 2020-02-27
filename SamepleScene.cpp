@@ -66,6 +66,8 @@ void SampleScene1(void) {
 	RiPixelSamples(2, 2);
 	RiShutter(0, 1);
 
+	RiDisplay("D:\\stbjpg3.jpg", "file", "rgb", RI_NULL);
+
 	/* new code*/
 	RiFrameBegin(1);
 	//RiTranslate(0, 0, -50);
@@ -80,6 +82,7 @@ void SampleScene1(void) {
 	RiTorus(1, .25, 0, 360, 360);
 	RiTransformEnd();
 
+	
 	RiTransformBegin();
 	color[0] = 0; color[1] = 1;
 	RiColor(color);
