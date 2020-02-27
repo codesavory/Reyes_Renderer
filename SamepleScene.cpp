@@ -62,27 +62,32 @@ void SampleScene1(void) {
 
 	RiBegin(RI_NULL);
 
-	RiFormat(500, 500, 1);
+	RiFormat(512, 512, 1);
 	RiPixelSamples(2, 2);
 	RiShutter(0, 1);
 
 	/* new code*/
 	RiFrameBegin(1);
-	RiTranslate(0, 0, -50);
+	RiTranslate(0, 0, -90);
 
 	RiWorldBegin();
-	RiTransformBegin();
 
 	RiDisplay("D:\\stbjpg3.jpg", "file", "rgb", RI_NULL);
-	RiColor(red);
-	RiSphere(15, 0, 0, 0);
-	RiTransformEnd();
 
-	RiTransformBegin();
-	RiTranslate(10, 0, 10);
-	RiColor(blue);
-	RiSphere(5, 0, 0, 0);
+	//RiTransformBegin();
+	////RiRotate(90.0f, -1.0, 0.0, 0.0);
+	//RiColor(red);
+	//Ri_GeometricShader(checker_explode);
+	//RiSphere(30, 0, 0, 0);
+	//RiTransformEnd();
 	
+	RiTransformBegin();
+	RiRotate(90.0f, -1.0, 0.0, 0.0);
+	RiColor(blue);
+	//parse_teapot_patches();
+	//Ri_Texture(earth);
+	RiSphere(20, 0, 0, 0);
+	RiTransformEnd();
 	
 	//RiTorus(40, 20, 0, 0, 0);
 	RiTransformEnd();
