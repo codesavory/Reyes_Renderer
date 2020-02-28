@@ -225,6 +225,11 @@ void RiSurface(void (*surface_shader)(FragmentShaderPayload& p)) {
 	render_state.surface_shader = surface_shader;
 }
 
+void RiMakeTexture(std::string filepath, int id) {
+	std::shared_ptr<Texture> texture = std::make_shared<Texture>(filepath);
+	render_state.texture = texture;
+}
+
 
 template<typename T, typename... Args>
 void _generate(Args ... args) {
@@ -242,6 +247,7 @@ void _generate(Args ... args) {
 	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_transformation;
 	//ptr->geometric_shader = transformation_state.geometric_shade;
 	ptr->surface_shader = render_state.surface_shader;
+	ptr->texture = render_state.texture;
 	//ptr->surface_shade = checkboard;
 	world_state.object_ptrs.push_back(std::move(ptr));
 }

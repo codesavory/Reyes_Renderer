@@ -323,6 +323,7 @@ void Ri_GeometricShader(void (*geometric_shade)(GeometricShaderPayload& p));
 void Ri_Texture(void (*surface_shader)(FragmentShaderPayload& p));
 template<typename T, typename... Args>
 void _generate(Args...args);
+void RiMakeTexture(std::string filepath, int id);
 /*
 Error Codes
 1 - 10 System and File Errors

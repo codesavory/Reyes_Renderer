@@ -3,8 +3,8 @@
 #include "stb_image.h"
 #include "Types.h"
 
-Texture::Texture() {
-    unsigned char* raw_data = stbi_load("textures\\earth_2.jpg", &w, &h, &n, 0);
+Texture::Texture(std::string filepath) {
+    unsigned char* raw_data = stbi_load(filepath.c_str(), &w, &h, &n, 0);
     std::shared_ptr<unsigned char> data(raw_data);
     this->data = data;
 }

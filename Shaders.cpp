@@ -74,7 +74,7 @@ inline UVTuple get_uv(int id, int dice_factor) {
 //    p.triangle_verts = n_triangles;
 //}
 
-void earth(FragmentShaderPayload& p) {
+void texture_shader(FragmentShaderPayload& p) {
     float u = p.u;
     float v = p.v;
     std::shared_ptr<Texture> t = p.texture;

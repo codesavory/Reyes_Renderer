@@ -158,7 +158,7 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
     const int width = image_state.x_resolution;
     const int height = image_state.y_resolution;
 
-    std::shared_ptr<Texture> texture = std::make_shared<Texture>();
+    std::shared_ptr<Texture> texture;
     void (*surface_shader)(FragmentShaderPayload & p) = nullptr;
     //void (*geometric_shader)(GeometricShaderPayload & p) = checker_explode;
 
@@ -173,6 +173,7 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
         objPtr->build(width, height);
         objPtr->sh();
         surface_shader = objPtr->surface_shader;
+        texture = objPtr->texture;
 
         auto& points = objPtr->points;
         for (int j = 0; j < points.size(); ++j) {

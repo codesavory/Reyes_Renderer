@@ -111,7 +111,7 @@ public:
     std::shared_ptr<unsigned char> data;
     int w, h, n;
 
-    Texture();
+    Texture(std::string filepath);
 
     Color get_at(float u, float v) {
 

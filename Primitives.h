@@ -26,6 +26,7 @@ public:
 
     void (*geometric_shader)(GeometricShaderPayload& p) = nullptr;
     void (*surface_shader)(FragmentShaderPayload& p) = nullptr;
+    std::shared_ptr<Texture> texture;
 
     void setup_vectors(int l) {
         world_points.resize(l);
