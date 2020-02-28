@@ -94,27 +94,48 @@ void Tunnel()
 	RiEnd();
 }
 
+void Earth()
+{
+	RiBegin(RI_NULL);
+		//RiFormat(960, 720, 1.0);
+		RiFormat(400, 300, 1.0);
+		//RiFormat(200, 150, 1.0);
+		RiDisplay("D:\\a\\Earth.png", "", "");
+		RiPixelSamples(2,2);
+
+		RiFrameBegin(0);
+			/* set the perspective transformation */
+			float fov = 45.0;
+			RiProjection(RI_PERSPECTIVE, "fov", fov, RI_NULL);
+			//RiProjection(RI_ORTHOGRAPHIC);
+
+			RiWorldBegin();
+				RiTransformBegin();
+					RiMakeTexture("textures\\earth_2.jpg", 0);
+					//void (*earthShader)(void) = TextureMap0;
+					RiSurface(texture_shader);
+					RtColor blue = { 0, 0, 1 };
+					RtColor opacity = { .9, .9, .9 };
+					RiColor(blue);
+					/*RiOpacity(opacity);
+					BUMP_AMPLITUDE = .02;
+					BUMP_MIN_FREQ_EXP = 14;
+					BUMP_MAX_FREQ_EXP = 16;
+					RiDisplacement(BUMPY);*/
+					RiTranslate(0, 0, 5.0);
+					RiRotate(-175, 0, 1, 0);
+					RiRotate(110, 1, 0, 0);
+					RiSphere(1, -1, 1, 360, RI_NULL);
+				RiTransformEnd();
+			RiWorldEnd();
+
+		RiFrameEnd();
+
+	RiEnd();
+}
+
 
 int main(void) {
 	// select which scene to render
-	Tunnel();
-
-	//Eigen::Vector4f p[3];
-	//p[0] << -0.9, 0.9, 0, 1;
-	//p[1] << -0.9, -0.9, 0, 1;
-	////p[2] << 20, 2, 0, 1;
-
-
-	//std::vector<Eigen::Vector4f> points;
-	//for (int i = 0; i < 2; ++i) {
-	//	float screen_x = (p[i].x() + 1.0f) * 0.5f * 100;
-	//	float screen_y = (1 - (p[i].y() + 1) * 0.5) * 100;
-
-	//	std::cout << screen_x << "," << screen_y << "\n";
-	//	points.push_back(Eigen::Vector4f(screen_x, screen_y, p[i].z(), p[i].w()));
-	//}
-
-	//
-	//pimage(points);
-	//render_perspective_projection();
+	Earth();
 }
