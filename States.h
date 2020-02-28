@@ -61,7 +61,7 @@ public:
 
 	// https://renderman.pixar.com/resources/RenderMan_20/graphicsState.html#ribegin
 	int f_no;
-	int is_in_world_block;
+	bool is_in_world_block;
 
 	// world-to-camera
 	Eigen::Matrix4f world_to_view_transformation;
@@ -75,6 +75,26 @@ public:
 		//projection_type = RI_ORTHOGRAPHIC;
 		zNear = 0.0;
 		zFar = 100.0;
+		xsamples = 2, ysamples = 2;
+
+		f_no = 0;
+		is_in_world_block = false;
+
+		current_color = Color(0.0f, 0.0f, 0.0f);
+		world_to_view_transformation = Eigen::Matrix4f::Identity();
+		view_to_frame_transformation = Eigen::Matrix4f::Identity();
+		surface_shader = nullptr;
+	}
+
+	void reset() {
+		zNear = 0.0;
+		zFar = 100.0;
+		xsamples = 2, ysamples = 2;
+
+		f_no = 0;
+		is_in_world_block = false;
+
+		current_color = Color(0.0f, 0.0f, 0.0f);
 		world_to_view_transformation = Eigen::Matrix4f::Identity();
 		view_to_frame_transformation = Eigen::Matrix4f::Identity();
 		surface_shader = nullptr;

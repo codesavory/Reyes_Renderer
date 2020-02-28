@@ -155,7 +155,8 @@ void RiWorldEnd() {
 
 void RiFrameEnd() {
 	render_frame(world_state, render_state, image_state);
-	world_state.~WorldState();
+	world_state.object_ptrs.clear();
+	render_state.reset();
 }
 
 
