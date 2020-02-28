@@ -129,7 +129,7 @@ void RiFrameAspectRatio(float aspect_ratio) {
 //	}
 //}
 
-void RiProjection(RtToken projection_type, RtToken fov_t, float* fov, RtToken m) {
+void RiProjection(RtToken projection_type, RtToken fov_t, float fov, RtToken m) {
 	//https://renderman.pixar.com/resources/RenderMan_20/options.html#riprojection
 
 	//auto aspect_ratio = image_state.pixel_aspect_ratio;
@@ -137,7 +137,7 @@ void RiProjection(RtToken projection_type, RtToken fov_t, float* fov, RtToken m)
 	auto height = image_state.y_resolution;
 	float aspect = 1.0f * (float)width / (float)height;
 
-	auto projection_matrix = get_perspective_projection_matrix(*fov, aspect, 0, 100);
+	auto projection_matrix = get_perspective_projection_matrix(fov, aspect, 0.001, 100);
 	render_state.view_to_frame_transformation = projection_matrix;
 }
 
@@ -155,7 +155,6 @@ void RiWorldEnd() {
 
 void RiFrameEnd() {
 	render_frame(world_state, render_state, image_state);
-
 	world_state.~WorldState();
 }
 
@@ -163,16 +162,12 @@ void RiFrameEnd() {
 void RiTransformBegin() {
 	transformation_state.current_transformation = Eigen::Matrix4f::Identity();
 	transformation_state.is_in_transform_block = 1;
-	transformation_state.geometric_shade = nullptr;
-	transformation_state.surface_shader = nullptr;
 }
 
 
 void RiTransformEnd() {
 	transformation_state.current_transformation = Eigen::Matrix4f::Identity();
 	transformation_state.is_in_transform_block = 0;
-	transformation_state.geometric_shade = nullptr;
-	transformation_state.surface_shader = nullptr;
 }
 
 
@@ -222,12 +217,12 @@ void RiRotate(float rotation_angle, float dx, float dy, float dz) {
 	}
 }
 
-void Ri_GeometricShader(void (*geometric_shade)(GeometricShaderPayload& p)) {
-	transformation_state.geometric_shade = geometric_shade;
-}
+//void Ri_GeometricShader(void (*geometric_shade)(GeometricShaderPayload& p)) {
+//	transformation_state.geometric_shade = geometric_shade;
+//}
 
-void Ri_Texture(void (*surface_shader)(FragmentShaderPayload& p)) {
-	transformation_state.surface_shader = surface_shader;
+void RiSurface(void (*surface_shader)(FragmentShaderPayload& p)) {
+	render_state.surface_shader = surface_shader;
 }
 
 
@@ -245,8 +240,8 @@ void _generate(Args ... args) {
 	ptr->v = world_to_view_transformation;
 	ptr->p = view_to_frame_transformation;
 	ptr->mvp = view_to_frame_transformation * world_to_view_transformation * model_to_world_transformation;
-	ptr->geometric_shader = transformation_state.geometric_shade;
-	ptr->surface_shader = transformation_state.surface_shader;
+	//ptr->geometric_shader = transformation_state.geometric_shade;
+	ptr->surface_shader = render_state.surface_shader;
 	//ptr->surface_shade = checkboard;
 	world_state.object_ptrs.push_back(std::move(ptr));
 }

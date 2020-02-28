@@ -10,10 +10,6 @@
 #include "Buffers.h"
 #include "Shaders.h"
 #include "Renderer.h"
-//#define _USE_MATH_DEFINES
-//#include <OpenMesh/Core/IO/MeshIO.hh>
-//#include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
-//typedef OpenMesh::TriMesh_ArrayKernelT<> Mesh;
 
 
 inline
@@ -69,7 +65,9 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
             float w1 = edge_function(v2, v0, sample);
             float w2 = edge_function(v0, v1, sample);
 
-            bool is_inside = (w0 >= 0 && w1 >= 0 && w2 >= 0);
+            // The second or condition prevents back face culling, helping us 
+            // render inside surfaces of primitives
+            bool is_inside = (w0 >= 0 && w1 >= 0 && w2 >= 0) || (w0 < 0 && w1 < 0 && w2 < 0);
 
             if (is_inside) {
                 // compute barycentriic coordinates
@@ -109,8 +107,9 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
                     p.normal = interpolated_normal;
                     p.c = c_interpolated;
 
+                    if(surface_shader != nullptr)
+                        surface_shader(p);
 
-                    //surface_shader(p);
                     phong(p);
                     c_interpolated = p.c;
                     fb(x, y, m, n) = c_interpolated;
@@ -160,7 +159,7 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
     const int height = image_state.y_resolution;
 
     std::shared_ptr<Texture> texture = std::make_shared<Texture>();
-    void (*surface_shader)(FragmentShaderPayload & p) = earth;
+    void (*surface_shader)(FragmentShaderPayload & p) = nullptr;
     //void (*geometric_shader)(GeometricShaderPayload & p) = checker_explode;
 
     FrameBuffer frame_buffer(width, height, xsamples, ysamples);

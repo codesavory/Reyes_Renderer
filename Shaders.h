@@ -1,7 +1,10 @@
 #pragma once
 #include "Types.h"
 
-void checkboard(VertexShaderPayload& pi);
+extern float CHECK_SIZE_X;
+extern float CHECK_SIZE_Y;
+
+void CHECKERBOARD(FragmentShaderPayload& p);
 inline UVTuple get_uv(int id, int dice_factor);
 void checker_explode(GeometricShaderPayload& p);
 void earth(FragmentShaderPayload& p);

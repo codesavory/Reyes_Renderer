@@ -4,11 +4,10 @@
 #include <math.h>
 #include <set>
 
-
-void checkboard(VertexShaderPayload& pi) {
-    float CHECK_SIZE_X = 10.0f;
-    float CHECK_SIZE_Y = 10.0f;
-
+float CHECK_SIZE_X;
+float CHECK_SIZE_Y;
+void CHECKERBOARD(FragmentShaderPayload& pi) {
+    
     float u = pi.u;
     float v = pi.v;
     if ((int)(floor(u * CHECK_SIZE_X) + floor(v * CHECK_SIZE_Y)) % 2 == 0) {
@@ -37,43 +36,43 @@ inline UVTuple get_uv(int id, int dice_factor) {
     return p;
 }
 
-void checker_explode(GeometricShaderPayload& p) {
-    float CHECK_SIZE_X = 60.0f;
-    float CHECK_SIZE_Y = 60.0f;
-
-    int dice_factor = p.dice_factor;
-    auto& points = p.points;
-    auto& normals = p.normals;
-    auto& triangles = p.triangle_verts;
-    std::vector<TriangleVerts> n_triangles;
-
-    for (int i = 0; i < triangles.size(); ++i) {
-        auto verts = triangles[i].ids;
-        bool all_in = true;
-        std::set<bool> type;
-
-        for (int j = 0; j < 3; ++j) {
-            int v_id = verts[j];
-            UVTuple tup = get_uv(v_id, dice_factor);
-            float u = tup.u;
-            float v = tup.v;
-            bool t = (int)(floor(u * CHECK_SIZE_X) + floor(v * CHECK_SIZE_Y)) % 2 == 0;
-            float p = (int)floor(u * CHECK_SIZE_X) % 3;
-            float q = (int)floor(v * CHECK_SIZE_Y) % 3;
-            bool x = (p == 1) && (q == 1);
-            type.emplace(x && t);
-        }
-
-        if (type.size() == 1) {
-            bool f = *type.begin();
-            if (f)
-                n_triangles.push_back(triangles[i]);
-
-        }
-    }
-
-    p.triangle_verts = n_triangles;
-}
+//void checker_explode(GeometricShaderPayload& p) {
+//    float CHECK_SIZE_X = 60.0f;
+//    float CHECK_SIZE_Y = 60.0f;
+//
+//    int dice_factor = p.dice_factor;
+//    auto& points = p.points;
+//    auto& normals = p.normals;
+//    auto& triangles = p.triangle_verts;
+//    std::vector<TriangleVerts> n_triangles;
+//
+//    for (int i = 0; i < triangles.size(); ++i) {
+//        auto verts = triangles[i].ids;
+//        bool all_in = true;
+//        std::set<bool> type;
+//
+//        for (int j = 0; j < 3; ++j) {
+//            int v_id = verts[j];
+//            UVTuple tup = get_uv(v_id, dice_factor);
+//            float u = tup.u;
+//            float v = tup.v;
+//            bool t = (int)(floor(u * CHECK_SIZE_X) + floor(v * CHECK_SIZE_Y)) % 2 == 0;
+//            float p = (int)floor(u * CHECK_SIZE_X) % 3;
+//            float q = (int)floor(v * CHECK_SIZE_Y) % 3;
+//            bool x = (p == 1) && (q == 1);
+//            type.emplace(x && t);
+//        }
+//
+//        if (type.size() == 1) {
+//            bool f = *type.begin();
+//            if (f)
+//                n_triangles.push_back(triangles[i]);
+//
+//        }
+//    }
+//
+//    p.triangle_verts = n_triangles;
+//}
 
 void earth(FragmentShaderPayload& p) {
     float u = p.u;

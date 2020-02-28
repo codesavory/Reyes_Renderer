@@ -28,15 +28,11 @@ public:
 	// Defaults to Identity
 	// Set using Ri* transformation functions when inside an RiTRansformBegin block
 	Eigen::Matrix4f current_transformation;
-	void (*geometric_shade)(GeometricShaderPayload& p);
-	void (*surface_shader)(FragmentShaderPayload& p);
 	int is_in_transform_block;
 
 	TransformationState() {
 		is_in_transform_block = 0;
 		current_transformation = Eigen::Matrix4f::Identity();
-		geometric_shade = nullptr;
-		surface_shader = nullptr;
 	}
 };
 
@@ -72,7 +68,7 @@ public:
 	// camera - to - screen projection 
 	Eigen::Matrix4f view_to_frame_transformation;
 
-	void (*surface_shade)(FragmentShaderPayload& p);
+	void (*surface_shader)(FragmentShaderPayload& p);
 	std::shared_ptr<Texture> texture;
 
 	RenderState() {
@@ -81,6 +77,6 @@ public:
 		zFar = 100.0;
 		world_to_view_transformation = Eigen::Matrix4f::Identity();
 		view_to_frame_transformation = Eigen::Matrix4f::Identity();
-		surface_shade = nullptr;
+		surface_shader = nullptr;
 	}
 };
