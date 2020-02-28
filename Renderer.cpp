@@ -11,6 +11,8 @@
 #include "Shaders.h"
 #include "Renderer.h"
 
+std::shared_ptr<FrameBuffer> fb_ptr;
+std::shared_ptr<ZBuffer> zb_ptr;
 
 inline
 float edge_function(const Eigen::Vector4f& a, const Eigen::Vector4f& b, const Eigen::Vector4f& c)
@@ -123,7 +125,7 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
 }
 
 
-void pimage(FrameBuffer frame_buffer, const char* filename) {
+void pimage(FrameBuffer& frame_buffer, const char* filename) {
     //const char* f = "D:\\stbjpg3.jpg";
     const int CHANNEL_NUM = 3;
 
@@ -152,6 +154,36 @@ void pimage(FrameBuffer frame_buffer, const char* filename) {
     delete[] out_buffer;
 }
 
+void setup_buffers(int w, int h, int xs, int ys) {
+
+    bool is_empty = !(fb_ptr && zb_ptr);
+    if (is_empty) {
+        fb_ptr = std::make_shared<FrameBuffer>(w, h, xs, ys);
+        zb_ptr = std::make_shared<ZBuffer>(w, h, xs, ys);
+        return;
+    }
+
+
+    bool change = (w != fb_ptr->w || h != fb_ptr->h || xs != fb_ptr->xsamples || ys != fb_ptr->ysamples);
+    if (change) {
+        fb_ptr = std::make_shared<FrameBuffer>(w, h, xs, ys);
+        zb_ptr = std::make_shared<ZBuffer>(w, h, xs, ys);
+    }
+
+    else {
+        for (int x = 0; x < w; ++x) {
+            for (int y = 0; y < h; ++y) {
+                for (int m = 0; m < xs; ++m) {
+                    for (int n = 0; n < ys; ++n) {
+                        fb_ptr->operator()(x, y, m, n) = Color();
+                        zb_ptr->operator()(x, y, m, n).clear();
+                    }
+                }
+            }
+        }
+    }
+}
+
 void render_frame(WorldState& world_state, RenderState& render_state, ImageState& image_state) {
     const int xsamples = render_state.xsamples;
     const int ysamples = render_state.ysamples;
@@ -162,8 +194,7 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
     void (*surface_shader)(FragmentShaderPayload & p) = nullptr;
     //void (*geometric_shader)(GeometricShaderPayload & p) = checker_explode;
 
-    FrameBuffer frame_buffer(width, height, xsamples, ysamples);
-    ZBuffer z_buffer(width, height, xsamples, ysamples);
+    setup_buffers(width, height, xsamples, ysamples);
 
     std::vector<std::unique_ptr<Primitive>>& world_obj_ptrs = world_state.object_ptrs;
 
@@ -260,7 +291,7 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
 
                     sample(
                         x, y, xsamples, ysamples,
-                        frame_buffer, z_buffer,
+                        *fb_ptr, *zb_ptr,
                         tri, surface_shader, texture
                     );
                 }
@@ -274,6 +305,6 @@ void render_frame(WorldState& world_state, RenderState& render_state, ImageState
     }
 
 
-    pimage(frame_buffer, image_state.filename.c_str());
+    pimage(*fb_ptr, image_state.filename.c_str());
 
 }

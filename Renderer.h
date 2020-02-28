@@ -23,6 +23,6 @@ void sample(int x, int y, int xsamples, int ysamples, FrameBuffer& fb, ZBuffer& 
     std::shared_ptr<Texture> texture);
 
 
-void pimage(FrameBuffer frame_buffer, const char* filename);
+void pimage(FrameBuffer& frame_buffer, const char* filename);
 
 void render_frame(WorldState& world_state, RenderState& render_state, ImageState& image_state);
