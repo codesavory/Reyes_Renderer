@@ -10,7 +10,7 @@
 
 
 inline void parse_teapot_patches() {
-	std::ifstream input("a.txt");
+	std::ifstream input("teapot_points.txt");
 	std::string line;
 
 	int num_patch;
@@ -29,7 +29,7 @@ inline void parse_teapot_patches() {
 			cp[j] = Eigen::Vector3f(x, y, z);
 		}
 
-		Ri_Patch(cp);
+		Ri_Patch(cp, RI_NULL);
 	}
 }
 
@@ -215,8 +215,33 @@ void SampleScene1(void) {
 	RiEnd();
 };
 
+void Teapot() {
+	RiBegin(RI_NULL);
+	//RiFormat(960, 720, 1.0);
+	RiFormat(400, 300, 1.0);
+	//RiFormat(200, 150, 1.0);
+	RiDisplay("D:\\a\\Teapot.png", "", "");
+	RiPixelSamples(2, 2);
+
+	RiFrameBegin(0);
+	/* set the perspective transformation */
+	float fov = 45.0;
+	RiProjection(RI_PERSPECTIVE, "fov", fov, RI_NULL);
+	RiTranslate(0, 0, -10);
+	RiWorldBegin();
+	RiTransformBegin();
+	RtColor color = { 1,0,0 };
+	RiColor(color);
+	RiRotate(90, 1.0, 0.0, 0.0);
+	parse_teapot_patches();
+	RiTransformEnd();
+	RiWorldEnd();
+	RiFrameEnd();
+	RiEnd();
+}
+
 
 int main(void) {
 	// select which scene to render
-	SampleScene1();
+	Teapot();
 }

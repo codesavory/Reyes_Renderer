@@ -318,7 +318,7 @@ RiReadArchiveV(RtToken name, RtArchiveCallback callback,
 	RtInt n, RtToken tokens[], RtPointer parms[]);
 extern RtVoid
 RiErrorHandler(RtErrorHandler handler);
-void Ri_Patch(std::vector<Eigen::Vector3f> cp);
+void Ri_Patch(std::vector<Eigen::Vector3f> cp, RtToken m);
 void Ri_GeometricShader(void (*geometric_shade)(GeometricShaderPayload& p));
 void Ri_Texture(void (*surface_shader)(FragmentShaderPayload& p));
 template<typename T, typename... Args>

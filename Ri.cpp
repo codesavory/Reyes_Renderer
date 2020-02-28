@@ -270,7 +270,7 @@ void RiCone(float height, float radius, float tmax, RtToken mode) {
 }
 
 void Ri_Patch(std::vector<Eigen::Vector3f> cp, RtToken mode) {
-	_generate<Patch>(cp, 5.0f);
+	_generate<Patch>(cp, 1.0f);
 }
 
 
